@@ -3,6 +3,7 @@ module osrs-disc-bot
 go 1.21.4
 
 require (
+	github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/gemalto/flume v0.13.1
 	github.com/spf13/viper v1.17.0

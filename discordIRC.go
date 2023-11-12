@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"io"
 	"log"
@@ -122,11 +123,26 @@ func updateLeaderboard(session *discordgo.Session) {
 		return submissions[keys[i]] > submissions[keys[j]]
 	})
 
+	// Create the leaderboard message that will be sent
 	leaderboard := ""
-	for _, k := range keys {
-		leaderboard = leaderboard + k + ":" + strconv.Itoa(submissions[k]) + "\n"
+	for placement, k := range keys {
+		leaderboard = leaderboard + strconv.Itoa(placement+1) + ") " + k + ": " + strconv.Itoa(submissions[k]) + "\n"
 	}
-	_, err := session.ChannelMessageSend(config.DiscLeaderboardChan, leaderboard)
+
+	// Retrieve the one channel message and delete it in the leaderboard channel
+	messages, err := session.ChannelMessages(config.DiscLeaderboardChan, 1, "", "", "")
+	if err != nil {
+		return
+	}
+	err = session.ChannelMessageDelete(config.DiscLeaderboardChan, messages[0].ID)
+	if err != nil {
+		return
+	}
+
+	_, err = session.ChannelMessageSendEmbed(config.DiscLeaderboardChan, embed.NewEmbed().
+		SetTitle("Ponies Clan Points Leaderboard").
+		SetDescription(fmt.Sprintf(leaderboard)).
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
 	if err != nil {
 		return
 	}
