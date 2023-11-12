@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"github.com/gemalto/flume"
 	"github.com/spf13/viper"
 	"log"
 	"os"
@@ -64,9 +63,6 @@ func init() {
 }
 
 func main() {
-	var log = flume.New("main")
-	log.Info("TESTING")
-
 	// Throw a go func that will capture signal interrupts and will populate the submissions file
 	go func() {
 		sigchan := make(chan os.Signal)
