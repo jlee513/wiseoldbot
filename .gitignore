@@ -28,4 +28,4 @@ main.exe
 
 # Keep the submissions folder but ignore everything in there
 submissions/*
-!submissions/.gitkeep
+!submissions/clan_points.txt
