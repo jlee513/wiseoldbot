@@ -18,6 +18,8 @@ type Config struct {
 	DiscSubChan         string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
 	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
 	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+	TempleGroupId       string `mapstructure:"TEMPLE_GROUP_ID"`
+	TempleGroupKey      string `mapstructure:"TEMPLE_GROUP_KEY"`
 }
 
 var config Config

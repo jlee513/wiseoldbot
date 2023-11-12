@@ -212,9 +212,34 @@ func AddNewMember(session *discordgo.Session, message *discordgo.MessageCreate) 
 		}
 	}
 
+	// Add the user to the temple page
+	addNewMemberToTemple(newMember)
+
 	// Once everything is finished, delete the message from the submission channel
 	err = session.ChannelMessageDelete(config.DiscSignUpChan, message.ID)
 	if err != nil {
+		return
+	}
+}
+
+func addNewMemberToTemple(newMember string) {
+	url := "https://templeosrs.com/api/add_group_member.php"
+	method := "POST"
+
+	payload := strings.NewReader("id=" + config.TempleGroupId + "&key=" + config.TempleGroupKey + "&players=" + newMember)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	_, err = client.Do(req)
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 }
