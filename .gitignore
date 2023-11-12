@@ -25,3 +25,6 @@ main.exe
 
 # Remove .env
 .env
+
+# Keep the submissions folder but ignore everything in there
+submissions/*
