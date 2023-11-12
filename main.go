@@ -13,13 +13,22 @@ import (
 )
 
 type Config struct {
-	DiscBotToken        string `mapstructure:"DISCORD_BOT_TOKEN"`
-	DiscServURL         string `mapstructure:"DISCORD_SERVER_URL"`
-	DiscSubChan         string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
-	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
-	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
-	TempleGroupId       string `mapstructure:"TEMPLE_GROUP_ID"`
-	TempleGroupKey      string `mapstructure:"TEMPLE_GROUP_KEY"`
+	DiscBotToken         string `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscSubChan          string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
+	DiscSignUpChan       string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
+	DiscLeaderboardChan  string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+	DiscDirectoryChan    string `mapstructure:"DISCORD_DIRECTORY_CHANNEL"`
+	DiscSlayerBossesChan string `mapstructure:"DISCORD_SLAYER_BOSSES_CHANNEL"`
+	DiscGwdChan          string `mapstructure:"DISCORD_GWD_CHANNEL"`
+	DiscWildyChan        string `mapstructure:"DISCORD_WILDERNESS_CHANNEL"`
+	DiscOtherChan        string `mapstructure:"DISCORD_OTHER_CHANNEL"`
+	DiscMiscChan         string `mapstructure:"DISCORD_MISC_CHANNEL"`
+	DiscDT2Chan          string `mapstructure:"DISCORD_DT2_CHANNEL"`
+	DiscRaidsChan        string `mapstructure:"DISCORD_RAIDS_CHANNEL"`
+	DiscPVPChan          string `mapstructure:"DISCORD_PVP_CHANNEL"`
+	DiscCluesChan        string `mapstructure:"DISCORD_CLUES_CHANNEL"`
+	TempleGroupId        string `mapstructure:"TEMPLE_GROUP_ID"`
+	TempleGroupKey       string `mapstructure:"TEMPLE_GROUP_KEY"`
 }
 
 var config Config

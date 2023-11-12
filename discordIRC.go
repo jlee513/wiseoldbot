@@ -24,6 +24,140 @@ func startDiscordIRC() {
 		log.Fatal(err)
 	}
 
+	slayerBosses := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"sire":               "https://i.imgur.com/O4NzB95.png",
+			"hydra":              "https://i.imgur.com/O4NzB95.png",
+			"cerberus":           "https://i.imgur.com/O4NzB95.png",
+			"grotesqueguardians": "https://i.imgur.com/O4NzB95.png",
+			"kraken":             "https://i.imgur.com/O4NzB95.png",
+			"smokedevil":         "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscSlayerBossesChan,
+	}
+
+	gwd := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"commanderzilyana": "https://i.imgur.com/O4NzB95.png",
+			"kreearra":         "https://i.imgur.com/O4NzB95.png",
+			"kriltsutsaroth":   "https://i.imgur.com/O4NzB95.png",
+			"nex":              "https://i.imgur.com/O4NzB95.png",
+			"generalgraardor":  "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscGwdChan,
+	}
+
+	wildy := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"artio":              "https://i.imgur.com/O4NzB95.png",
+			"callisto":           "https://i.imgur.com/O4NzB95.png",
+			"calvarion":          "https://i.imgur.com/O4NzB95.png",
+			"vetion":             "https://i.imgur.com/O4NzB95.png",
+			"spindel":            "https://i.imgur.com/O4NzB95.png",
+			"venenatis":          "https://i.imgur.com/O4NzB95.png",
+			"chaoselemental":     "https://i.imgur.com/O4NzB95.png",
+			"chaosfanatic":       "https://i.imgur.com/O4NzB95.png",
+			"crazyarchaeologist": "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscWildyChan,
+	}
+
+	other := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"corporealbeast": "https://i.imgur.com/O4NzB95.png",
+			"prime":          "https://i.imgur.com/O4NzB95.png",
+			"rexbro":         "https://i.imgur.com/O4NzB95.png",
+			"supreme":        "https://i.imgur.com/O4NzB95.png",
+			"gauntlet":       "https://i.imgur.com/O4NzB95.png",
+			"gauntlethard":   "https://i.imgur.com/O4NzB95.png",
+			"giantmole":      "https://i.imgur.com/EO9HfXe.gif",
+			"jad":            "https://i.imgur.com/O4NzB95.png",
+			"zuk":            "https://i.imgur.com/O4NzB95.png",
+			"kq":             "https://i.imgur.com/O4NzB95.png",
+			"kbd":            "https://i.imgur.com/O4NzB95.png",
+			"sarachnis":      "https://i.imgur.com/O4NzB95.png",
+			"skotizo":        "https://i.imgur.com/O4NzB95.png",
+			"muspah":         "https://i.imgur.com/O4NzB95.png",
+			"vorkath":        "https://i.imgur.com/O4NzB95.png",
+			"phosanis":       "https://i.imgur.com/O4NzB95.png",
+			"nightmare":      "https://i.imgur.com/O4NzB95.png",
+			"zulrah":         "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscOtherChan,
+	}
+
+	misc := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"barrows":               "https://i.imgur.com/O4NzB95.png",
+			"hespori":               "https://i.imgur.com/O4NzB95.png",
+			"mimic":                 "https://i.imgur.com/O4NzB95.png",
+			"obor":                  "https://i.imgur.com/O4NzB95.png",
+			"bryophyta":             "https://i.imgur.com/O4NzB95.png",
+			"derangedarchaeologist": "https://i.imgur.com/O4NzB95.png",
+			"wintertodt":            "https://i.imgur.com/O4NzB95.png",
+			"zalcano":               "https://i.imgur.com/O4NzB95.png",
+			"tempoross":             "https://i.imgur.com/O4NzB95.png",
+			"rift":                  "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscMiscChan,
+	}
+
+	dt2 := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"duke":      "https://i.imgur.com/O4NzB95.png",
+			"leviathan": "https://i.imgur.com/O4NzB95.png",
+			"whisperer": "https://i.imgur.com/O4NzB95.png",
+			"vardorvis": "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscDT2Chan,
+	}
+
+	raids := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"cox":   "https://i.imgur.com/O4NzB95.png",
+			"coxcm": "https://i.imgur.com/O4NzB95.png",
+			"tob":   "https://i.imgur.com/O4NzB95.png",
+			"tobcm": "https://i.imgur.com/O4NzB95.png",
+			"toa":   "https://i.imgur.com/O4NzB95.png",
+			"toae":  "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscRaidsChan,
+	}
+
+	pvp := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"bhh":   "https://i.imgur.com/O4NzB95.png",
+			"bhr":   "https://i.imgur.com/O4NzB95.png",
+			"lms":   "https://i.imgur.com/O4NzB95.png",
+			"arena": "https://i.imgur.com/O4NzB95.png",
+			"zeal":  "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscPVPChan,
+	}
+
+	clues := hallOfFameRequestInfo{
+		Bosses: map[string]string{
+			"clueall":      "https://i.imgur.com/O4NzB95.png",
+			"cluebeginner": "https://i.imgur.com/O4NzB95.png",
+			"clueeasy":     "https://i.imgur.com/O4NzB95.png",
+			"cluemedium":   "https://i.imgur.com/O4NzB95.png",
+			"cluehard":     "https://i.imgur.com/O4NzB95.png",
+			"clueelite":    "https://i.imgur.com/O4NzB95.png",
+			"cluemaster":   "https://i.imgur.com/O4NzB95.png",
+		},
+		DiscChan: config.DiscCluesChan,
+	}
+
+	updateHallOfFame(session, slayerBosses)
+	updateHallOfFame(session, gwd)
+	updateHallOfFame(session, wildy)
+	updateHallOfFame(session, other)
+	updateHallOfFame(session, misc)
+	updateHallOfFame(session, dt2)
+	updateHallOfFame(session, raids)
+	updateHallOfFame(session, pvp)
+	updateHallOfFame(session, clues)
+
 	// Create handler for listening for submission messages
 	session.AddHandler(listenForSubmission)
 	session.AddHandler(AddNewMember)

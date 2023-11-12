@@ -1,5 +1,5 @@
-Peor:0
-Draco:14
+Draco:17
 temp:3
-Also Lucky:5
-Calibre:0
+Also Lucky:7
+Calibre:1
+Peor:0
