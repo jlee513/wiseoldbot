@@ -191,17 +191,30 @@ func AddNewMember(session *discordgo.Session, message *discordgo.MessageCreate) 
 	//TODO: SCRUB THE USERNAME SUBMITTED
 	newMember := message.Content
 
+	// Create a private channel with the user submitting (will reuse if one exists)
+	channel, err := session.UserChannelCreate(message.Author.ID)
+	if err != nil {
+		return
+	}
+
 	// Ensure that this person does not exist in the submissions map currently
 	if _, ok := submissions[newMember]; !ok {
 		submissions[newMember] = 0
-		_, err := session.ChannelMessageSend(message.ChannelID, "Successfully added new member: "+newMember)
+		// Send a message on that channel
+		_, err = session.ChannelMessageSend(channel.ID, "You have successfully added new member: "+newMember)
 		if err != nil {
 			return
 		}
 	} else {
-		_, err := session.ChannelMessageSend(message.ChannelID, "Member: "+newMember+" already exists.")
+		_, err = session.ChannelMessageSend(channel.ID, "Member: "+newMember+" already exists.")
 		if err != nil {
 			return
 		}
+	}
+
+	// Once everything is finished, delete the message from the submission channel
+	err = session.ChannelMessageDelete(config.DiscSignUpChan, message.ID)
+	if err != nil {
+		return
 	}
 }
