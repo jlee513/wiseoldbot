@@ -29,9 +29,5 @@ main.exe
 # Remove .env
 .env
 
-# Keep the submissions folder but ignore everything in there
-submissions/*
-!submissions/clan_points.txt
-
 # secrets
 client_secret.json
