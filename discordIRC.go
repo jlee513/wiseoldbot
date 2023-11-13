@@ -200,6 +200,7 @@ func downloadSubmissionScreenshot(submissionLink string) {
 
 func UpdateMemberList(session *discordgo.Session, message *discordgo.MessageCreate) {
 	//TODO: SCRUB THE USERNAME SUBMITTED
+	// Don't include the remove command in the RSN
 	newMember := strings.Replace(message.Content, "!rm ", "", -1)
 
 	// Create a private channel with the user submitting (will reuse if one exists)
