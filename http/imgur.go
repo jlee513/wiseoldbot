@@ -1,35 +1,28 @@
-package main
+package http
 
 import (
 	"bytes"
 	"encoding/json"
+	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
+	"osrs-disc-bot/util"
+	"time"
 )
 
-func uploadToImgur(submissionLink string) string {
-	// Download the submission link in order to get the bytes in order to upload to imgur
-	client := &http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
-		},
-	}
-	// Get the image in the response and send that to the imgurUpload function
-	resp, err := client.Get(submissionLink)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	imageUrl := imgurUpload(resp.Body)
-	return imageUrl
+type ImgurClient struct {
+	client *http.Client
 }
 
-func imgurUpload(image io.Reader) string {
+func NewImgurClient() *ImgurClient {
+	client := new(ImgurClient)
+	client.client = &http.Client{Timeout: 30 * time.Second}
+	return client
+}
+
+func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Reader) string {
 	var buf = new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
 
@@ -40,8 +33,7 @@ func imgurUpload(image io.Reader) string {
 	req, _ := http.NewRequest("POST", "https://api.imgur.com/3/image", buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	token := getNewAccessToken()
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Authorization", "Bearer "+AccessToken)
 
 	client := &http.Client{}
 	res, _ := client.Do(req)
@@ -54,7 +46,7 @@ func imgurUpload(image io.Reader) string {
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(body))
-	var img imageInfoDataWrapper
+	var img util.ImageInfoDataWrapper
 	if err = dec.Decode(&img); err != nil {
 		panic(err)
 	}
@@ -62,19 +54,12 @@ func imgurUpload(image io.Reader) string {
 	return img.Ii.Link
 }
 
-func getNewAccessToken() string {
-	client := &http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
-		},
-	}
-
+func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string, ClientID string, ClientSecret string) string {
 	rawBody, err := json.Marshal(
-		GenerateAccessTokenRequest{
-			RefreshToken: config.ImgurRefreshToken,
-			ClientID:     config.ImgurClientId,
-			ClientSecret: config.ImgurClientSecret,
+		util.GenerateAccessTokenRequest{
+			RefreshToken: RefreshToken,
+			ClientID:     ClientID,
+			ClientSecret: ClientSecret,
 			GrantType:    "refresh_token",
 		})
 
@@ -85,7 +70,7 @@ func getNewAccessToken() string {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := client.Do(req)
+	resp, err := i.client.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +81,7 @@ func getNewAccessToken() string {
 	}
 	defer resp.Body.Close()
 
-	response := GenerateAccessTokenResponse{}
+	response := util.GenerateAccessTokenResponse{}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.UseNumber()
 	if err = decoder.Decode(&response); err != nil {

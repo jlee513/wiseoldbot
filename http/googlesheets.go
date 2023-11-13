@@ -1,14 +1,20 @@
-package main
+package http
 
 import (
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"
+	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
-func prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
+type GoogleSheetsClient struct {
+	client *http.Client
+}
+
+func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	// Create the client with the correct JWT configuration
 	data, err := os.ReadFile("client_secret.json")
 	checkError(err)
@@ -26,11 +32,10 @@ func prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	return sheet
 }
 
-func initCpSheet() {
-	sheet := prepGoogleSheet(config.SheetsCp)
+func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(cpSheet string, submissions map[string]int) {
+	sheet := g.prepGoogleSheet(cpSheet)
 
 	// Set the in memory submissions map with the Google sheets information
-	submissions = make(map[string]int)
 	for _, row := range sheet.Rows {
 		isPlayer := true
 		player := ""
@@ -48,8 +53,14 @@ func initCpSheet() {
 	}
 }
 
-func updateCpSheet() {
-	sheet := prepGoogleSheet(config.SheetsCp)
+func NewGoogleSheetsClient() *GoogleSheetsClient {
+	client := new(GoogleSheetsClient)
+	client.client = &http.Client{Timeout: 30 * time.Second}
+	return client
+}
+
+func (g GoogleSheetsClient) UpdateCpSheet(cpSheet string, submissions map[string]int) {
+	sheet := g.prepGoogleSheet(cpSheet)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
@@ -70,8 +81,8 @@ func updateCpSheet() {
 	checkError(err)
 }
 
-func updateCpScreenshotsSheet() {
-	sheet := prepGoogleSheet(config.SheetsCpSub)
+func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(cpScreenshotSheet string, cpscreenshots map[string]string) {
+	sheet := g.prepGoogleSheet(cpScreenshotSheet)
 
 	// Append new rows into the sheets
 	startingRow := len(sheet.Rows)

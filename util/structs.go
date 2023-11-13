@@ -1,4 +1,4 @@
-package main
+package util
 
 type Config struct {
 	DiscBotToken         string `mapstructure:"DISCORD_BOT_TOKEN"`
@@ -19,14 +19,14 @@ type Config struct {
 	TempleGroupId        string `mapstructure:"TEMPLE_GROUP_ID"`
 	TempleGroupKey       string `mapstructure:"TEMPLE_GROUP_KEY"`
 	SheetsCp             string `mapstructure:"SHEETS_CP"`
-	SheetsCpSub          string `mapstructure:"SHEETS_CP_SUB"`
-	SheetsSpeedSub       string `mapstructure:"SHEETS_SPEED_SUB"`
+	SheetsCpSC           string `mapstructure:"SHEETS_CP_SC"`
+	SheetsSpeedSC        string `mapstructure:"SHEETS_SPEED_SC"`
 	ImgurClientId        string `mapstructure:"IMGUR_CLIENT_ID"`
 	ImgurClientSecret    string `mapstructure:"IMGUR_CLIENT_SECRET"`
 	ImgurRefreshToken    string `mapstructure:"IMGUR_REFRESH_TOKEN"`
 }
 
-type hallOfFameInfo struct {
+type HallOfFameInfo struct {
 	Data struct {
 		BossName string         `json:"skill"`
 		Players  map[int]Player `json:"players"`
@@ -38,18 +38,18 @@ type Player struct {
 	Kc       int    `json:"xp"`
 }
 
-type hallOfFameRequestInfo struct {
+type HallOfFameRequestInfo struct {
 	Bosses   map[string]string
 	DiscChan string
 }
 
-type collectionLogInfo struct {
+type CollectionLogInfo struct {
 	CollectionLog struct {
 		Uniques int `json:"uniqueObtained"`
 	} `json:"collectionLog"`
 }
 
-type imageInfoDataWrapper struct {
+type ImageInfoDataWrapper struct {
 	Ii      *ImageInfo `json:"data"`
 	Success bool       `json:"success"`
 }
