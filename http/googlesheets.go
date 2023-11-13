@@ -11,7 +11,17 @@ import (
 )
 
 type GoogleSheetsClient struct {
-	client *http.Client
+	client    *http.Client
+	cpSheet   string
+	cpScSheet string
+}
+
+func NewGoogleSheetsClient(cpSheet string, cpScSheet string) *GoogleSheetsClient {
+	client := new(GoogleSheetsClient)
+	client.client = &http.Client{Timeout: 30 * time.Second}
+	client.cpSheet = cpSheet
+	client.cpScSheet = cpScSheet
+	return client
 }
 
 func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
@@ -32,8 +42,8 @@ func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	return sheet
 }
 
-func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(cpSheet string, submissions map[string]int) {
-	sheet := g.prepGoogleSheet(cpSheet)
+func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(submissions map[string]int) {
+	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	// Set the in memory submissions map with the Google sheets information
 	for _, row := range sheet.Rows {
@@ -53,14 +63,8 @@ func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(cpSheet string, submi
 	}
 }
 
-func NewGoogleSheetsClient() *GoogleSheetsClient {
-	client := new(GoogleSheetsClient)
-	client.client = &http.Client{Timeout: 30 * time.Second}
-	return client
-}
-
-func (g GoogleSheetsClient) UpdateCpSheet(cpSheet string, submissions map[string]int) {
-	sheet := g.prepGoogleSheet(cpSheet)
+func (g GoogleSheetsClient) UpdateCpSheet(submissions map[string]int) {
+	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
@@ -81,8 +85,8 @@ func (g GoogleSheetsClient) UpdateCpSheet(cpSheet string, submissions map[string
 	checkError(err)
 }
 
-func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(cpScreenshotSheet string, cpscreenshots map[string]string) {
-	sheet := g.prepGoogleSheet(cpScreenshotSheet)
+func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(cpscreenshots map[string]string) {
+	sheet := g.prepGoogleSheet(g.cpScSheet)
 
 	// Append new rows into the sheets
 	startingRow := len(sheet.Rows)

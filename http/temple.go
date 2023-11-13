@@ -12,29 +12,29 @@ import (
 )
 
 type TempleClient struct {
-	client *http.Client
+	client       *http.Client
+	addApiURL    string
+	removeApiURL string
+	podiumApiURL string
 }
 
 func NewTempleClient() *TempleClient {
 	client := new(TempleClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
+	client.addApiURL = "https://templeosrs.com/api/add_group_member.php"
+	client.removeApiURL = "https://templeosrs.com/api/remove_group_member.php"
+	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=2291&count=3&skill="
 	return client
 }
 
-func (t *TempleClient) AddMemberToTemple(newMember string, templeGroupId string, templeGroupKey string) {
-	url := "https://templeosrs.com/api/add_group_member.php"
-	method := "POST"
-
-	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + newMember)
-
-	req, err := http.NewRequest(method, url, payload)
+func (t *TempleClient) AddMemberToTemple(addingMember string, templeGroupId string, templeGroupKey string) {
+	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + addingMember)
+	req, err := http.NewRequest(http.MethodPost, t.addApiURL, payload)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
 	_, err = t.client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -43,20 +43,14 @@ func (t *TempleClient) AddMemberToTemple(newMember string, templeGroupId string,
 }
 
 func (t *TempleClient) RemoveMemberFromTemple(removingMember string, templeGroupId string, templeGroupKey string) {
-	url := "https://templeosrs.com/api/remove_group_member.php"
-	method := "POST"
-
 	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + removingMember)
-
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
+	req, err := http.NewRequest(http.MethodPost, t.removeApiURL, payload)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
 	_, err = client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -65,9 +59,7 @@ func (t *TempleClient) RemoveMemberFromTemple(removingMember string, templeGroup
 }
 
 func (t *TempleClient) GetPodiumFromTemple(bossIdForTemple string) (*util.HallOfFameInfo, []int) {
-	url := "https://templeosrs.com/api/skill_hiscores.php?group=2291&count=3&skill=" + bossIdForTemple
-
-	resp, err := t.client.Get(url)
+	resp, err := t.client.Get(t.podiumApiURL + bossIdForTemple)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil

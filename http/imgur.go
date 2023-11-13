@@ -13,12 +13,16 @@ import (
 )
 
 type ImgurClient struct {
-	client *http.Client
+	client     *http.Client
+	uploadURL  string
+	refreshURL string
 }
 
 func NewImgurClient() *ImgurClient {
 	client := new(ImgurClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
+	client.uploadURL = "https://api.imgur.com/3/image"
+	client.refreshURL = "https://api.imgur.com/oauth2/token"
 	return client
 }
 
@@ -30,13 +34,11 @@ func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Re
 	io.Copy(part, image)
 
 	writer.Close()
-	req, _ := http.NewRequest("POST", "https://api.imgur.com/3/image", buf)
+	req, _ := http.NewRequest(http.MethodPost, i.uploadURL, buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-
 	req.Header.Set("Authorization", "Bearer "+AccessToken)
 
-	client := &http.Client{}
-	res, _ := client.Do(req)
+	res, _ := i.client.Do(req)
 	defer res.Body.Close()
 
 	// Read the whole body
@@ -63,11 +65,10 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 			GrantType:    "refresh_token",
 		})
 
-	req, err := http.NewRequest(http.MethodPost, "https://api.imgur.com/oauth2/token", bytes.NewBuffer(rawBody))
+	req, err := http.NewRequest(http.MethodPost, i.refreshURL, bytes.NewBuffer(rawBody))
 	if err != nil {
 		panic(err)
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := i.client.Do(req)

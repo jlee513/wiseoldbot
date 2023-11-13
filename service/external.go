@@ -18,9 +18,9 @@ type collectionLog interface {
 }
 
 type sheets interface {
-	InitializeSubmissionsFromSheet(sheet string, submissions map[string]int)
-	UpdateCpSheet(cpSheet string, submissions map[string]int)
-	UpdateCpScreenshotsSheet(cpScreenshotSheet string, cpscreenshots map[string]string)
+	InitializeSubmissionsFromSheet(submissions map[string]int)
+	UpdateCpSheet(submissions map[string]int)
+	UpdateCpScreenshotsSheet(cpscreenshots map[string]string)
 }
 
 type temple interface {
