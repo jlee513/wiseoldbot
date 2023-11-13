@@ -40,7 +40,6 @@ func init() {
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic("Failed to read environment variable, exiting now...")
-		return
 	}
 	err = viper.Unmarshal(&config)
 
