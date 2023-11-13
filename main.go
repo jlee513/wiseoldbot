@@ -26,6 +26,7 @@ type Config struct {
 	DiscRaidsChan        string `mapstructure:"DISCORD_RAIDS_CHANNEL"`
 	DiscPVPChan          string `mapstructure:"DISCORD_PVP_CHANNEL"`
 	DiscCluesChan        string `mapstructure:"DISCORD_CLUES_CHANNEL"`
+	DiscColChan          string `mapstructure:"DISCORD_COL_CHANNEL"`
 	TempleGroupId        string `mapstructure:"TEMPLE_GROUP_ID"`
 	TempleGroupKey       string `mapstructure:"TEMPLE_GROUP_KEY"`
 }

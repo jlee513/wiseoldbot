@@ -29,6 +29,7 @@ func startDiscordIRC() {
 	session.AddHandler(AddNewMember)
 
 	updateCollectionLog(session)
+	kickOffHallOfFameUpdate(session)
 
 	// Send intent
 	session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
@@ -254,7 +255,7 @@ func kickOffHallOfFameUpdate(session *discordgo.Session) {
 	misc := hallOfFameRequestInfo{Bosses: map[string]string{"barrows": "https://i.imgur.com/ajoK20v.png", "hespori": "https://i.imgur.com/b0qYGHS.png", "mimic": "https://i.imgur.com/jC7yTC3.png", "obor": "https://i.imgur.com/dwLvSbR.png", "bryophyta": "https://i.imgur.com/3cdyp4X.png", "derangedarchaeologist": "https://i.imgur.com/cnHpevF.png", "wintertodt": "https://i.imgur.com/6oFef2Y.png", "zalcano": "https://i.imgur.com/edN11Nf.png", "tempoross": "https://i.imgur.com/fRj3JA4.png", "rift": "https://i.imgur.com/MOiyXeH.png"}, DiscChan: config.DiscMiscChan}
 	dt2 := hallOfFameRequestInfo{Bosses: map[string]string{"duke": "https://i.imgur.com/RYPmrXy.png", "leviathan": "https://i.imgur.com/mEQRq5c.png", "whisperer": "https://i.imgur.com/cFGWb6Y.png", "vardorvis": "https://i.imgur.com/WMPuShZ.png"}, DiscChan: config.DiscDT2Chan}
 	raids := hallOfFameRequestInfo{Bosses: map[string]string{"cox": "https://i.imgur.com/gxdWXtH.png", "coxcm": "https://i.imgur.com/gxdWXtH.png", "tob": "https://i.imgur.com/pW1sJAQ.png", "tobcm": "https://i.imgur.com/pW1sJAQ.png", "toa": "https://i.imgur.com/VwW1FA7.png", "toae": "https://i.imgur.com/VwW1FA7.png"}, DiscChan: config.DiscRaidsChan}
-	pvp := hallOfFameRequestInfo{Bosses: map[string]string{"bhh": "https://i.imgur.com/O4NzB95.png", "bhr": "https://i.imgur.com/O4NzB95.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/O4NzB95.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: config.DiscPVPChan}
+	pvp := hallOfFameRequestInfo{Bosses: map[string]string{"bhh": "https://i.imgur.com/zSQhlWk.png", "bhr": "https://i.imgur.com/Y3Sga7t.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/uNP6Ggu.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: config.DiscPVPChan}
 	clues := hallOfFameRequestInfo{Bosses: map[string]string{"clueall": "https://i.imgur.com/wX3Ei7U.png", "cluebeginner": "https://i.imgur.com/fUmzJkW.png", "clueeasy": "https://i.imgur.com/phnSCHj.png", "cluemedium": "https://i.imgur.com/t5iH8Xa.png", "cluehard": "https://i.imgur.com/a0xwcGI.png", "clueelite": "https://i.imgur.com/ibNRk3G.png", "cluemaster": "https://i.imgur.com/12rCLVv.png"}, DiscChan: config.DiscCluesChan}
 
 	updateHallOfFame(session, slayerBosses)
