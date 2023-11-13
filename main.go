@@ -9,6 +9,7 @@ import (
 
 var config Config
 var submissions map[string]int
+var cpscreenshots map[string]string
 
 func init() {
 	// Initialize the Viper configuration ingestion and unmarshal
@@ -21,6 +22,7 @@ func init() {
 	err = viper.Unmarshal(&config)
 
 	initCpSheet()
+	cpscreenshots = make(map[string]string)
 }
 
 func main() {
@@ -39,6 +41,7 @@ func main() {
 
 		// Once the program is interrupted, update the google clan points sheet
 		updateCpSheet()
+		updateCpScreenshotsSheet()
 	}()
 
 	startDiscordIRC()

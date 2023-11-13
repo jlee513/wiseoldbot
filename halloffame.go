@@ -1,16 +1,31 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
-	"io"
-	"log"
-	"net/http"
-	"sort"
-	"strconv"
 )
+
+func kickOffHallOfFameUpdate(session *discordgo.Session) {
+	slayerBosses := hallOfFameRequestInfo{Bosses: map[string]string{"sire": "https://i.imgur.com/GhbmqEB.png", "hydra": "https://i.imgur.com/25GU0Ph.png", "cerberus": "https://i.imgur.com/UoxGuQi.png", "grotesqueguardians": "https://i.imgur.com/M7ylVBZ.png", "kraken": "https://i.imgur.com/Q6EbJb1.png", "smokedevil": "https://i.imgur.com/2AYntQ5.png"}, DiscChan: config.DiscSlayerBossesChan}
+	gwd := hallOfFameRequestInfo{Bosses: map[string]string{"commanderzilyana": "https://i.imgur.com/aNm4Ydd.png", "kreearra": "https://i.imgur.com/lX8SfgN.png", "kriltsutsaroth": "https://i.imgur.com/hh8cMvp.png", "nex": "https://i.imgur.com/pqiVQBC.png", "generalgraardor": "https://i.imgur.com/hljv9ZW.png"}, DiscChan: config.DiscGwdChan}
+	wildy := hallOfFameRequestInfo{Bosses: map[string]string{"artio": "https://i.imgur.com/bw6zLpU.png", "callisto": "https://i.imgur.com/bw6zLpU.png", "calvarion": "https://i.imgur.com/v3KX75y.png", "vetion": "https://i.imgur.com/v3KX75y.png", "spindel": "https://i.imgur.com/4zknWSX.png", "venenatis": "https://i.imgur.com/4zknWSX.png", "chaoselemental": "https://i.imgur.com/YAvIpbm.png", "chaosfanatic": "https://i.imgur.com/azV2sD1.png", "crazyarchaeologist": "https://i.imgur.com/23LXv53.png", "scorpia": "https://i.imgur.com/9aaguxB.png"}, DiscChan: config.DiscWildyChan}
+	other := hallOfFameRequestInfo{Bosses: map[string]string{"corporealbeast": "https://i.imgur.com/zEDN4Pf.png", "prime": "https://i.imgur.com/kJBtqHB.png", "rexbro": "https://i.imgur.com/PvlGWFZ.png", "supreme": "https://i.imgur.com/BOgkBuD.png", "gauntlet": "https://i.imgur.com/weiHWnz.png", "gauntlethard": "https://i.imgur.com/xzW4TGR.png", "giantmole": "https://i.imgur.com/coKk2pr.gif", "jad": "https://i.imgur.com/H9aO1Ot.png", "zuk": "https://i.imgur.com/mKstHza.png", "kq": "https://i.imgur.com/ZuaFoBR.png", "kbd": "https://i.imgur.com/r5vkw1s.png", "sarachnis": "https://i.imgur.com/98THH8O.png", "skotizo": "https://i.imgur.com/YUcQu4d.png", "muspah": "https://i.imgur.com/sW2cLQ2.png", "vorkath": "https://i.imgur.com/6biF3P2.png", "phosanis": "https://i.imgur.com/4aDkxms.png", "nightmare": "https://i.imgur.com/4aDkxms.png", "zulrah": "https://i.imgur.com/tPllWNF.png"}, DiscChan: config.DiscOtherChan}
+	misc := hallOfFameRequestInfo{Bosses: map[string]string{"barrows": "https://i.imgur.com/ajoK20v.png", "hespori": "https://i.imgur.com/b0qYGHS.png", "mimic": "https://i.imgur.com/jC7yTC3.png", "obor": "https://i.imgur.com/dwLvSbR.png", "bryophyta": "https://i.imgur.com/3cdyp4X.png", "derangedarchaeologist": "https://i.imgur.com/cnHpevF.png", "wintertodt": "https://i.imgur.com/6oFef2Y.png", "zalcano": "https://i.imgur.com/edN11Nf.png", "tempoross": "https://i.imgur.com/fRj3JA4.png", "rift": "https://i.imgur.com/MOiyXeH.png"}, DiscChan: config.DiscMiscChan}
+	dt2 := hallOfFameRequestInfo{Bosses: map[string]string{"duke": "https://i.imgur.com/RYPmrXy.png", "leviathan": "https://i.imgur.com/mEQRq5c.png", "whisperer": "https://i.imgur.com/cFGWb6Y.png", "vardorvis": "https://i.imgur.com/WMPuShZ.png"}, DiscChan: config.DiscDT2Chan}
+	raids := hallOfFameRequestInfo{Bosses: map[string]string{"cox": "https://i.imgur.com/gxdWXtH.png", "coxcm": "https://i.imgur.com/gxdWXtH.png", "tob": "https://i.imgur.com/pW1sJAQ.png", "tobcm": "https://i.imgur.com/pW1sJAQ.png", "toa": "https://i.imgur.com/2GvzqGw.png", "toae": "https://i.imgur.com/2GvzqGw.png"}, DiscChan: config.DiscRaidsChan}
+	pvp := hallOfFameRequestInfo{Bosses: map[string]string{"bhh": "https://i.imgur.com/zSQhlWk.png", "bhr": "https://i.imgur.com/Y3Sga7t.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/uNP6Ggu.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: config.DiscPVPChan}
+	clues := hallOfFameRequestInfo{Bosses: map[string]string{"clueall": "https://i.imgur.com/wX3Ei7U.png", "cluebeginner": "https://i.imgur.com/fUmzJkW.png", "clueeasy": "https://i.imgur.com/phnSCHj.png", "cluemedium": "https://i.imgur.com/t5iH8Xa.png", "cluehard": "https://i.imgur.com/a0xwcGI.png", "clueelite": "https://i.imgur.com/ibNRk3G.png", "cluemaster": "https://i.imgur.com/12rCLVv.png"}, DiscChan: config.DiscCluesChan}
+
+	updateHallOfFame(session, slayerBosses)
+	updateHallOfFame(session, gwd)
+	updateHallOfFame(session, wildy)
+	updateHallOfFame(session, other)
+	updateHallOfFame(session, misc)
+	updateHallOfFame(session, dt2)
+	updateHallOfFame(session, raids)
+	updateHallOfFame(session, pvp)
+	updateHallOfFame(session, clues)
+	updateCollectionLog(session)
+}
 
 func updateHallOfFame(session *discordgo.Session, requestInfo hallOfFameRequestInfo) {
 	// First, delete all the messages within the channel
@@ -34,184 +49,4 @@ func updateHallOfFame(session *discordgo.Session, requestInfo hallOfFameRequestI
 		getPodiumFromTemple(session, bossIdForTemple, requestInfo.DiscChan, imageURL)
 	}
 	return
-}
-
-func getPodiumFromTemple(session *discordgo.Session, bossIdForTemple string, discordChan string, imageURL string) {
-	url := "https://templeosrs.com/api/skill_hiscores.php?group=2291&count=3&skill=" + bossIdForTemple
-
-	resp, err := http.Get(url)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// Unmarshal into hallOfFameInfo struct
-		var f hallOfFameInfo
-		err = json.Unmarshal(bodyBytes, &f)
-		if err != nil {
-			fmt.Println("Error parsing JSON: ", err)
-		}
-
-		// Sort the map based on the keys
-		keys := make([]int, 0, len(f.Data.Players))
-		for key := range f.Data.Players {
-			keys = append(keys, key)
-		}
-		sort.Ints(keys)
-
-		// Iterate over the players to get the different places for users to create the placements
-		placements := ""
-		for _, k := range keys {
-			switch k {
-			case 1:
-				placements = placements + ":first_place: "
-				break
-			case 2:
-				placements = placements + ":second_place: "
-				break
-			case 3:
-				placements = placements + ":third_place: "
-				break
-			}
-			placements = placements + f.Data.Players[k].Username + " [" + strconv.Itoa(f.Data.Players[k].Kc) + "]\n"
-		}
-
-		_, err = session.ChannelMessageSendEmbed(discordChan, embed.NewEmbed().
-			SetTitle(f.Data.BossName).
-			SetDescription(placements).
-			SetColor(0x1c1c1c).SetThumbnail(imageURL).MessageEmbed)
-		if err != nil {
-			return
-		}
-	}
-}
-
-func updateCollectionLog(session *discordgo.Session) {
-	collectionLogs := make(map[string]int)
-	for player, _ := range submissions {
-		url := "https://api.collectionlog.net/collectionlog/user/" + player
-		resp, err := http.Get(url)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			bodyBytes, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// Unmarshal into hallOfFameInfo struct
-			var col collectionLogInfo
-			err = json.Unmarshal(bodyBytes, &col)
-			if err != nil {
-				fmt.Println("Error parsing JSON: ", err)
-			}
-
-			collectionLogs[player] = col.CollectionLog.Uniques
-		} else if resp.StatusCode == http.StatusNotFound {
-			fmt.Println("Missing user: " + player)
-			continue
-		}
-	}
-
-	// Update the #cp-leaderboard
-	keys := make([]string, 0, len(collectionLogs))
-	for key := range collectionLogs {
-		keys = append(keys, key)
-	}
-
-	// Sort the map based on the values
-	sort.SliceStable(keys, func(i, j int) bool {
-		return collectionLogs[keys[i]] > collectionLogs[keys[j]]
-	})
-
-	// Create the leaderboard message that will be sent
-	placements := ""
-	for placement, k := range keys {
-		switch placement {
-		case 0:
-			placements = placements + ":one: "
-			break
-		case 1:
-			placements = placements + ":two: "
-			break
-		case 2:
-			placements = placements + ":three: "
-			break
-		case 3:
-			placements = placements + ":four: "
-			break
-		case 4:
-			placements = placements + ":five: "
-			break
-		case 5:
-			placements = placements + ":six: "
-			break
-		case 6:
-			placements = placements + ":seven: "
-			break
-		case 7:
-			placements = placements + ":eight: "
-			break
-		case 8:
-			placements = placements + ":nine: "
-			break
-		case 9:
-			placements = placements + ":keycap_10: "
-			break
-
-		}
-
-		placements = placements + k + " [" + strconv.Itoa(collectionLogs[k]) + "]\n"
-	}
-
-	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(config.DiscColChan, 10, "", "", "")
-	if err != nil {
-		return
-	}
-
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-
-	err = session.ChannelMessagesBulkDelete(config.DiscColChan, messageIDs)
-	if err != nil {
-		return
-	}
-
-	// Send the collection log message
-	_, err = session.ChannelMessageSendEmbed(config.DiscColChan, embed.NewEmbed().
-		SetTitle("Collection Log Ranking").
-		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
-	if err != nil {
-		return
-	}
-
-	// Send the instructions on how to get on the collection log hall of fame
-	var msg string
-	msg = msg + "1. Download the collection-log plugin\n"
-	msg = msg + "2. Click the box to \"Allow collectionlog.net connections\"\n"
-	msg = msg + "3. Click through the collection log (there will be a * next to the one you still need to click)\n"
-	msg = msg + "4. Go to the collection log icon on the sidebar\n"
-	msg = msg + "5. Click Account at the top and then upload collection log\n"
-	_, err = session.ChannelMessageSendEmbed(config.DiscColChan, embed.NewEmbed().
-		SetTitle("How To Get Onto The Collection Log HOF").
-		SetDescription(msg).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
-	if err != nil {
-		return
-	}
 }

@@ -5,6 +5,7 @@ go 1.21.4
 require (
 	github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646
 	github.com/bwmarrin/discordgo v0.27.1
+	github.com/koffeinsource/go-imgur v0.4.1
 	github.com/spf13/viper v1.17.0
 	golang.org/x/net v0.15.0
 	golang.org/x/oauth2 v0.12.0
@@ -18,6 +19,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/koffeinsource/go-klogger v0.1.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect

@@ -18,7 +18,7 @@ func prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 
 	// Fetch the clan points google sheet
 	service := spreadsheet.NewServiceWithClient(client)
-	googlesheet, err := service.FetchSpreadsheet(config.SheetsCp)
+	googlesheet, err := service.FetchSpreadsheet(sheetId)
 	checkError(err)
 	sheet, err := googlesheet.SheetByIndex(0)
 	checkError(err)
@@ -67,6 +67,22 @@ func updateCpSheet() {
 
 	// Make sure call Synchronize to reflect the changes
 	err = sheet.Synchronize()
+	checkError(err)
+}
+
+func updateCpScreenshotsSheet() {
+	sheet := prepGoogleSheet(config.SheetsCpSub)
+
+	// Append new rows into the sheets
+	startingRow := len(sheet.Rows)
+	for imgurUrl, players := range cpscreenshots {
+		sheet.Update(startingRow, 0, imgurUrl)
+		sheet.Update(startingRow, 1, players)
+		startingRow++
+	}
+
+	// Make sure call Synchronize to reflect the changes
+	err := sheet.Synchronize()
 	checkError(err)
 }
 

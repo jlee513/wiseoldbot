@@ -2,19 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 	"syscall"
 
-	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -59,7 +53,7 @@ func listenForMessage(session *discordgo.Session, message *discordgo.MessageCrea
 	// Run certain tasks depending on the channel the message was posted in
 	switch channel := message.ChannelID; channel {
 	case config.DiscSubChan:
-		listenForSubmission(session, message)
+		listenForCPSubmission(session, message)
 	case config.DiscSignUpChan:
 		UpdateMemberList(session, message)
 	default:
@@ -68,7 +62,7 @@ func listenForMessage(session *discordgo.Session, message *discordgo.MessageCrea
 	}
 }
 
-func listenForSubmission(session *discordgo.Session, message *discordgo.MessageCreate) {
+func listenForCPSubmission(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 	// instead of running a for loop inside a for loop when adding clan points
 	whitespaceStrippedMessage := strings.Replace(message.Content, ", ", ",", -1)
@@ -108,7 +102,14 @@ func listenForSubmission(session *discordgo.Session, message *discordgo.MessageC
 
 	// Iterate through all the pictures and download them
 	for _, submissionPicture := range message.Attachments {
-		downloadSubmissionScreenshot(submissionPicture.ProxyURL)
+		// If it's an imgur link, save the link in the cpscreenshots map
+		if strings.Contains(submissionPicture.ProxyURL, "imgur") {
+			cpscreenshots[submissionPicture.ProxyURL] = whitespaceStrippedMessage
+		} else if strings.Contains(submissionPicture.ProxyURL, "media.discordapp.net") {
+			submissionUrl := uploadToImgur(submissionPicture.ProxyURL)
+			cpscreenshots[submissionUrl] = whitespaceStrippedMessage
+		} else {
+		}
 		numberOfSubmissions++
 	}
 
@@ -125,77 +126,6 @@ func listenForSubmission(session *discordgo.Session, message *discordgo.MessageC
 	if err != nil {
 		return
 	}
-}
-
-// updateLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
-func updateLeaderboard(session *discordgo.Session) {
-	// Update the #cp-leaderboard
-	keys := make([]string, 0, len(submissions))
-	for key := range submissions {
-		keys = append(keys, key)
-	}
-
-	// Sort the map based on the values
-	sort.SliceStable(keys, func(i, j int) bool {
-		return submissions[keys[i]] > submissions[keys[j]]
-	})
-
-	// Create the leaderboard message that will be sent
-	leaderboard := ""
-	for placement, k := range keys {
-		leaderboard = leaderboard + strconv.Itoa(placement+1) + ") " + k + ": " + strconv.Itoa(submissions[k]) + "\n"
-	}
-
-	// Retrieve the one channel message and delete it in the leaderboard channel
-	messages, err := session.ChannelMessages(config.DiscLeaderboardChan, 1, "", "", "")
-	if err != nil {
-		return
-	}
-	err = session.ChannelMessageDelete(config.DiscLeaderboardChan, messages[0].ID)
-	if err != nil {
-		return
-	}
-
-	_, err = session.ChannelMessageSendEmbed(config.DiscLeaderboardChan, embed.NewEmbed().
-		SetTitle("Ponies Clan Points Leaderboard").
-		SetDescription(fmt.Sprintf(leaderboard)).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
-	if err != nil {
-		return
-	}
-}
-
-func downloadSubmissionScreenshot(submissionLink string) {
-	// Build fileName from fullPath
-	fileURL, err := url.Parse(submissionLink)
-	if err != nil {
-		log.Fatal(err)
-	}
-	path := fileURL.Path
-	segments := strings.Split(path, "/")
-	fileName := segments[len(segments)-1]
-
-	// Create blank file
-	file, err := os.Create("submissions/" + fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	client := http.Client{
-		CheckRedirect: func(r *http.Request, via []*http.Request) error {
-			r.URL.Opaque = r.URL.Path
-			return nil
-		},
-	}
-	// Put content on file
-	resp, err := client.Get(submissionLink)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(file, resp.Body)
-
-	defer file.Close()
 }
 
 func UpdateMemberList(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -262,73 +192,6 @@ func UpdateMemberList(session *discordgo.Session, message *discordgo.MessageCrea
 	// Once everything is finished, delete the message from the submission channel
 	err = session.ChannelMessageDelete(config.DiscSignUpChan, message.ID)
 	if err != nil {
-		return
-	}
-}
-
-func addNewMemberToTemple(newMember string) {
-	url := "https://templeosrs.com/api/add_group_member.php"
-	method := "POST"
-
-	payload := strings.NewReader("id=" + config.TempleGroupId + "&key=" + config.TempleGroupKey + "&players=" + newMember)
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	_, err = client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-}
-
-func kickOffHallOfFameUpdate(session *discordgo.Session) {
-	slayerBosses := hallOfFameRequestInfo{Bosses: map[string]string{"sire": "https://i.imgur.com/GhbmqEB.png", "hydra": "https://i.imgur.com/25GU0Ph.png", "cerberus": "https://i.imgur.com/UoxGuQi.png", "grotesqueguardians": "https://i.imgur.com/M7ylVBZ.png", "kraken": "https://i.imgur.com/Q6EbJb1.png", "smokedevil": "https://i.imgur.com/2AYntQ5.png"}, DiscChan: config.DiscSlayerBossesChan}
-	gwd := hallOfFameRequestInfo{Bosses: map[string]string{"commanderzilyana": "https://i.imgur.com/aNm4Ydd.png", "kreearra": "https://i.imgur.com/lX8SfgN.png", "kriltsutsaroth": "https://i.imgur.com/hh8cMvp.png", "nex": "https://i.imgur.com/pqiVQBC.png", "generalgraardor": "https://i.imgur.com/hljv9ZW.png"}, DiscChan: config.DiscGwdChan}
-	wildy := hallOfFameRequestInfo{Bosses: map[string]string{"artio": "https://i.imgur.com/bw6zLpU.png", "callisto": "https://i.imgur.com/bw6zLpU.png", "calvarion": "https://i.imgur.com/v3KX75y.png", "vetion": "https://i.imgur.com/v3KX75y.png", "spindel": "https://i.imgur.com/4zknWSX.png", "venenatis": "https://i.imgur.com/4zknWSX.png", "chaoselemental": "https://i.imgur.com/YAvIpbm.png", "chaosfanatic": "https://i.imgur.com/azV2sD1.png", "crazyarchaeologist": "https://i.imgur.com/23LXv53.png", "scorpia": "https://i.imgur.com/9aaguxB.png"}, DiscChan: config.DiscWildyChan}
-	other := hallOfFameRequestInfo{Bosses: map[string]string{"corporealbeast": "https://i.imgur.com/zEDN4Pf.png", "prime": "https://i.imgur.com/kJBtqHB.png", "rexbro": "https://i.imgur.com/PvlGWFZ.png", "supreme": "https://i.imgur.com/BOgkBuD.png", "gauntlet": "https://i.imgur.com/weiHWnz.png", "gauntlethard": "https://i.imgur.com/xzW4TGR.png", "giantmole": "https://i.imgur.com/coKk2pr.gif", "jad": "https://i.imgur.com/H9aO1Ot.png", "zuk": "https://i.imgur.com/mKstHza.png", "kq": "https://i.imgur.com/ZuaFoBR.png", "kbd": "https://i.imgur.com/r5vkw1s.png", "sarachnis": "https://i.imgur.com/98THH8O.png", "skotizo": "https://i.imgur.com/YUcQu4d.png", "muspah": "https://i.imgur.com/sW2cLQ2.png", "vorkath": "https://i.imgur.com/6biF3P2.png", "phosanis": "https://i.imgur.com/4aDkxms.png", "nightmare": "https://i.imgur.com/4aDkxms.png", "zulrah": "https://i.imgur.com/tPllWNF.png"}, DiscChan: config.DiscOtherChan}
-	misc := hallOfFameRequestInfo{Bosses: map[string]string{"barrows": "https://i.imgur.com/ajoK20v.png", "hespori": "https://i.imgur.com/b0qYGHS.png", "mimic": "https://i.imgur.com/jC7yTC3.png", "obor": "https://i.imgur.com/dwLvSbR.png", "bryophyta": "https://i.imgur.com/3cdyp4X.png", "derangedarchaeologist": "https://i.imgur.com/cnHpevF.png", "wintertodt": "https://i.imgur.com/6oFef2Y.png", "zalcano": "https://i.imgur.com/edN11Nf.png", "tempoross": "https://i.imgur.com/fRj3JA4.png", "rift": "https://i.imgur.com/MOiyXeH.png"}, DiscChan: config.DiscMiscChan}
-	dt2 := hallOfFameRequestInfo{Bosses: map[string]string{"duke": "https://i.imgur.com/RYPmrXy.png", "leviathan": "https://i.imgur.com/mEQRq5c.png", "whisperer": "https://i.imgur.com/cFGWb6Y.png", "vardorvis": "https://i.imgur.com/WMPuShZ.png"}, DiscChan: config.DiscDT2Chan}
-	raids := hallOfFameRequestInfo{Bosses: map[string]string{"cox": "https://i.imgur.com/gxdWXtH.png", "coxcm": "https://i.imgur.com/gxdWXtH.png", "tob": "https://i.imgur.com/pW1sJAQ.png", "tobcm": "https://i.imgur.com/pW1sJAQ.png", "toa": "https://i.imgur.com/2GvzqGw.png", "toae": "https://i.imgur.com/2GvzqGw.png"}, DiscChan: config.DiscRaidsChan}
-	pvp := hallOfFameRequestInfo{Bosses: map[string]string{"bhh": "https://i.imgur.com/zSQhlWk.png", "bhr": "https://i.imgur.com/Y3Sga7t.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/uNP6Ggu.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: config.DiscPVPChan}
-	clues := hallOfFameRequestInfo{Bosses: map[string]string{"clueall": "https://i.imgur.com/wX3Ei7U.png", "cluebeginner": "https://i.imgur.com/fUmzJkW.png", "clueeasy": "https://i.imgur.com/phnSCHj.png", "cluemedium": "https://i.imgur.com/t5iH8Xa.png", "cluehard": "https://i.imgur.com/a0xwcGI.png", "clueelite": "https://i.imgur.com/ibNRk3G.png", "cluemaster": "https://i.imgur.com/12rCLVv.png"}, DiscChan: config.DiscCluesChan}
-
-	updateHallOfFame(session, slayerBosses)
-	updateHallOfFame(session, gwd)
-	updateHallOfFame(session, wildy)
-	updateHallOfFame(session, other)
-	updateHallOfFame(session, misc)
-	updateHallOfFame(session, dt2)
-	updateHallOfFame(session, raids)
-	updateHallOfFame(session, pvp)
-	updateHallOfFame(session, clues)
-	updateCollectionLog(session)
-}
-
-func removeNewMemberToTemple(newMember string) {
-	url := "https://templeosrs.com/api/remove_group_member.php"
-	method := "POST"
-
-	payload := strings.NewReader("id=" + config.TempleGroupId + "&key=" + config.TempleGroupKey + "&players=" + newMember)
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	_, err = client.Do(req)
-	if err != nil {
-		fmt.Println(err)
 		return
 	}
 }
