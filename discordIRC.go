@@ -29,8 +29,6 @@ func startDiscordIRC() {
 	// Create handler for listening for submission messages
 	session.AddHandler(listenForMessage)
 
-	kickOffHallOfFameUpdate(session)
-
 	// Send intent
 	session.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 
@@ -42,6 +40,8 @@ func startDiscordIRC() {
 		}
 	}(session)
 
+	// Initialize the Hall Of fame
+	//kickOffHallOfFameUpdate(session)
 	fmt.Println("the bot is online!")
 
 	// Block so that it continues to run the bot
