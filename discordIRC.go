@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
-	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
+
+	embed "github.com/Clinet/discordgo-embed"
+	"github.com/bwmarrin/discordgo"
 )
 
 // Use of discordgo as an intro to discord IRC
@@ -25,8 +27,7 @@ func startDiscordIRC() {
 	}
 
 	// Create handler for listening for submission messages
-	session.AddHandler(listenForSubmission)
-	session.AddHandler(AddNewMember)
+	session.AddHandler(listenForMessage)
 
 	kickOffHallOfFameUpdate(session)
 
@@ -49,17 +50,30 @@ func startDiscordIRC() {
 	<-sc
 }
 
-func listenForSubmission(session *discordgo.Session, message *discordgo.MessageCreate) {
+func listenForMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// Don't handle message if it's created by the discord bot
-	// Also, don't handle messages other than ones send in the submission channel
-	if message.Author.ID == session.State.User.ID || message.ChannelID != config.DiscSubChan {
+	if message.Author.ID == session.State.User.ID {
 		return
 	}
 
+	// Run certain tasks depending on the channel the message was posted in
+	switch channel := message.ChannelID; channel {
+	case config.DiscSubChan:
+		listenForSubmission(session, message)
+	case config.DiscSignUpChan:
+		UpdateMemberList(session, message)
+	default:
+		// Return if the message was not posted in one of the channels we are handling
+		return
+	}
+}
+
+func listenForSubmission(session *discordgo.Session, message *discordgo.MessageCreate) {
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 	// instead of running a for loop inside a for loop when adding clan points
 	whitespaceStrippedMessage := strings.Replace(message.Content, ", ", ",", -1)
 	whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
+
 	names := strings.Split(whitespaceStrippedMessage, ",")
 
 	// Before adding clanpoints, ensure that all the names used in the submission is valid and already created
@@ -85,6 +99,7 @@ func listenForSubmission(session *discordgo.Session, message *discordgo.MessageC
 			if err != nil {
 				return
 			}
+
 			return
 		}
 	}
@@ -183,15 +198,10 @@ func downloadSubmissionScreenshot(submissionLink string) {
 	defer file.Close()
 }
 
-func AddNewMember(session *discordgo.Session, message *discordgo.MessageCreate) {
-	// Don't handle message if it's created by the discord bot
-	// Also, don't handle messages other than ones send in the submission channel
-	if message.Author.ID == session.State.User.ID || message.ChannelID != config.DiscSignUpChan {
-		return
-	}
-
+func UpdateMemberList(session *discordgo.Session, message *discordgo.MessageCreate) {
 	//TODO: SCRUB THE USERNAME SUBMITTED
-	newMember := message.Content
+	// Don't include the remove command in the RSN
+	newMember := strings.Replace(message.Content, "!rm ", "", -1)
 
 	// Create a private channel with the user submitting (will reuse if one exists)
 	channel, err := session.UserChannelCreate(message.Author.ID)
@@ -199,16 +209,48 @@ func AddNewMember(session *discordgo.Session, message *discordgo.MessageCreate) 
 		return
 	}
 
+	// Remove user from temple if the message prefix is "rm"
+	re := regexp.MustCompile("(?i)^(!rm)\\s+.+$") // Case insensitive. Must start with "!rm". Must have atleast one space between "!rm" and the username. There must be text after "!rm". We use "!" at the beginning in case a user's name starts with "rm".
+	if re.Match([]byte(message.Content)) {
+		// Remove the user from the temple page
+		removeNewMemberToTemple(newMember)
+
+		if userExists(session, newMember, message.ChannelID) {
+			submissions[newMember] = 0
+
+			// Send a message on that channel
+			_, err := session.ChannelMessageSend(channel.ID, "You have successfully removed a member: "+newMember)
+			if err != nil {
+				return
+			}
+		} else {
+			_, err := session.ChannelMessageSend(channel.ID, "Member: "+newMember+" does not exist.")
+			if err != nil {
+				return
+			}
+		}
+
+		// Once everything is finished, delete the message from the submission channel
+		err = session.ChannelMessageDelete(config.DiscSignUpChan, message.ID)
+		if err != nil {
+			return
+		}
+
+		// Don't continue because the following code is to add a user
+		return
+	}
+
 	// Ensure that this person does not exist in the submissions map currently
-	if _, ok := submissions[newMember]; !ok {
-		submissions[newMember] = 0
-		// Send a message on that channel
-		_, err = session.ChannelMessageSend(channel.ID, "You have successfully added new member: "+newMember)
+	if userExists(session, newMember, message.ChannelID) {
+		_, err := session.ChannelMessageSend(channel.ID, "Member: "+newMember+" already exists.")
 		if err != nil {
 			return
 		}
 	} else {
-		_, err = session.ChannelMessageSend(channel.ID, "Member: "+newMember+" already exists.")
+		submissions[newMember] = 0
+
+		// Send a message on that channel
+		_, err := session.ChannelMessageSend(channel.ID, "You have successfully added new member: "+newMember)
 		if err != nil {
 			return
 		}
@@ -267,4 +309,36 @@ func kickOffHallOfFameUpdate(session *discordgo.Session) {
 	updateHallOfFame(session, pvp)
 	updateHallOfFame(session, clues)
 	updateCollectionLog(session)
+}
+
+func removeNewMemberToTemple(newMember string) {
+	url := "https://templeosrs.com/api/remove_group_member.php"
+	method := "POST"
+
+	payload := strings.NewReader("id=" + config.TempleGroupId + "&key=" + config.TempleGroupKey + "&players=" + newMember)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, payload)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	_, err = client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func userExists(session *discordgo.Session, member string, channelID string) (exists bool) {
+	exists = false
+
+	if _, ok := submissions[member]; ok {
+		exists = true
+	}
+
+	return
 }
