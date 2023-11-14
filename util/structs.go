@@ -40,6 +40,7 @@ type Player struct {
 }
 
 type HallOfFameRequestInfo struct {
+	Name     string
 	Bosses   map[string]string
 	DiscChan string
 }

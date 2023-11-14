@@ -15,9 +15,11 @@ and podium finish with [kc]
 */
 func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) {
 	for _, requestInfo := range allRequestInfo {
+		s.log.Debug("Running update HOF for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
+			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
 			return
 		}
 		var messageIDs []string
@@ -26,6 +28,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		}
 		err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 		if err != nil {
+			s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name)
 			return
 		}
 
@@ -56,10 +59,10 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				SetDescription(placements).
 				SetColor(0x1c1c1c).SetThumbnail(imageURL).MessageEmbed)
 			if err != nil {
+				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
 				return
 			}
 		}
-		return
 	}
 }
 
