@@ -353,8 +353,8 @@ func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session
 	pvp := util.HallOfFameRequestInfo{Name: "PVP", Bosses: map[string]string{"bhh": "https://i.imgur.com/zSQhlWk.png", "bhr": "https://i.imgur.com/Y3Sga7t.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/uNP6Ggu.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: s.config.DiscPVPChan}
 	clues := util.HallOfFameRequestInfo{Name: "Clues", Bosses: map[string]string{"clueall": "https://i.imgur.com/wX3Ei7U.png", "cluebeginner": "https://i.imgur.com/fUmzJkW.png", "clueeasy": "https://i.imgur.com/phnSCHj.png", "cluemedium": "https://i.imgur.com/t5iH8Xa.png", "cluehard": "https://i.imgur.com/a0xwcGI.png", "clueelite": "https://i.imgur.com/ibNRk3G.png", "cluemaster": "https://i.imgur.com/12rCLVv.png"}, DiscChan: s.config.DiscCluesChan}
 
-	// Kick off a scheduled job immediately then at midnight everyday
-	job, err := s.scheduler.Every(1).Day().At("00:00").Do(func() {
+	// Kick off a scheduled job at a configured time
+	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
 		s.log.Debug("Running Cron Job to update the Hall Of Fame and Collection Log...")
 		s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
 		s.updateColLog(ctx, session)

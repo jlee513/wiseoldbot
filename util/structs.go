@@ -25,6 +25,7 @@ type Config struct {
 	ImgurClientSecret    string `mapstructure:"IMGUR_CLIENT_SECRET"`
 	ImgurRefreshToken    string `mapstructure:"IMGUR_REFRESH_TOKEN"`
 	LogDebug             bool   `mapstructure:"LOG_DEBUG"`
+	CronKickoffTime      string `mapstructure:"CRON_KICKOFF_TIME"`
 }
 
 type HallOfFameInfo struct {
