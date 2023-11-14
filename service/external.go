@@ -1,7 +1,7 @@
 package service
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"io"
 	"osrs-disc-bot/util"
 )
@@ -14,17 +14,17 @@ type imgur interface {
 }
 
 type collectionLog interface {
-	RetrieveCollectionLogAndOrder(submissions map[string]int) (map[string]int, []string)
+	RetrieveCollectionLogAndOrder(ctx context.Context, submissions map[string]int) (map[string]int, []string)
 }
 
 type sheets interface {
-	InitializeSubmissionsFromSheet(submissions map[string]int)
-	UpdateCpSheet(submissions map[string]int)
-	UpdateCpScreenshotsSheet(cpscreenshots map[string]string)
+	InitializeSubmissionsFromSheet(ctx context.Context, submissions map[string]int)
+	UpdateCpSheet(ctx context.Context, submissions map[string]int)
+	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string)
 }
 
 type temple interface {
-	AddMemberToTemple(addingMember string, templeGroupId string, templeGroupKey string)
-	RemoveMemberFromTemple(removingMember string, templeGroupId string, templeGroupKey string)
-	GetPodiumFromTemple(bossIdForTemple string) (*util.HallOfFameInfo, []int)
+	AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string)
+	RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string)
+	GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
 }

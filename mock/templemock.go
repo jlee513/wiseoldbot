@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"net/http"
 	"osrs-disc-bot/util"
 	"time"
@@ -16,14 +17,14 @@ func NewTempleClient() *TempleClientMock {
 	return client
 }
 
-func (t *TempleClientMock) AddMemberToTemple(addingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClientMock) AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string) {
 	return
 }
 
-func (t *TempleClientMock) RemoveMemberFromTemple(removingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClientMock) RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string) {
 	return
 }
 
-func (t *TempleClientMock) GetPodiumFromTemple(bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+func (t *TempleClientMock) GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
 	return nil, nil
 }

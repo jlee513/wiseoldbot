@@ -2,8 +2,8 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -26,6 +26,7 @@ func NewImgurClient() *ImgurClient {
 	return client
 }
 
+// Upload will upload the image provided into imgur and return back the imgur url
 func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Reader) string {
 	var buf = new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
@@ -56,6 +57,10 @@ func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Re
 	return img.Ii.Link
 }
 
+/*
+GetNewAccessToken will take the imgur refresh token along with client information to respond with
+the access token required to make submissions to the imgur API
+*/
 func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string, ClientID string, ClientSecret string) string {
 	rawBody, err := json.Marshal(
 		util.GenerateAccessTokenRequest{

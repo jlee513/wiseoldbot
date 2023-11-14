@@ -24,6 +24,7 @@ type Config struct {
 	ImgurClientId        string `mapstructure:"IMGUR_CLIENT_ID"`
 	ImgurClientSecret    string `mapstructure:"IMGUR_CLIENT_SECRET"`
 	ImgurRefreshToken    string `mapstructure:"IMGUR_REFRESH_TOKEN"`
+	LogDebug             bool   `mapstructure:"LOG_DEBUG"`
 }
 
 type HallOfFameInfo struct {
@@ -56,7 +57,7 @@ type ImageInfoDataWrapper struct {
 
 // ImageInfo contains all image information provided by imgur
 type ImageInfo struct {
-	Link string `json:"link"` // The direct link to the the image. (Note: if fetching an animated GIF that was over 20MB in original size, a .gif thumbnail will be returned)
+	Link string `json:"link"` // The direct link to the image. (Note: if fetching an animated GIF that was over 20MB in original size, a .gif thumbnail will be returned)
 }
 
 type GenerateAccessTokenRequest struct {

@@ -27,7 +27,7 @@ go.work
 main.exe
 
 # Remove .env
-.env
+config/.env
 
 # secrets
-client_secret.json
+config/client_secret.json
