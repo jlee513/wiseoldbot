@@ -75,7 +75,8 @@ func (s *Service) StartDiscordIRC() {
 	// Create a new discord session
 	session, err := discordgo.New("Bot " + s.config.DiscBotToken)
 	if err != nil {
-		log.Fatal(err)
+		s.log.Error("Failed to start discord bot: " + err.Error())
+		panic(err)
 	}
 
 	// Create handler for listening for submission messages
@@ -89,12 +90,15 @@ func (s *Service) StartDiscordIRC() {
 	defer func(discord *discordgo.Session) {
 		err := discord.Close()
 		if err != nil {
-
+			s.log.Error("Failed to stop discord bot: " + err.Error())
 		}
 	}(session)
 
 	// Kick off gocron for updating the Hall Of fame
-	s.kickOffHOFCron(ctx, session)
+	if err := s.kickOffHOFCron(ctx, session); err != nil {
+		s.log.Error("Failed to start Cron Job: " + err.Error())
+		panic(err)
+	}
 	s.log.Info("OSRS Disc Bot is now online!")
 
 	// Block so that it continues to run the bot
@@ -341,7 +345,7 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 }
 
 // kickOffHOFCron will instantiate the HallOfFameRequestInfos and kick off the cron job
-func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session) {
+func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session) error {
 	s.log.Info("Initializing Hall Of Fame Cron Job...")
 	slayerBosses := util.HallOfFameRequestInfo{Name: "Slayer Bosses", Bosses: map[string]string{"sire": "https://i.imgur.com/GhbmqEB.png", "hydra": "https://i.imgur.com/25GU0Ph.png", "cerberus": "https://i.imgur.com/UoxGuQi.png", "grotesqueguardians": "https://i.imgur.com/M7ylVBZ.png", "kraken": "https://i.imgur.com/Q6EbJb1.png", "smokedevil": "https://i.imgur.com/2AYntQ5.png"}, DiscChan: s.config.DiscSlayerBossesChan}
 	gwd := util.HallOfFameRequestInfo{Name: "GWD Bosses", Bosses: map[string]string{"commanderzilyana": "https://i.imgur.com/aNm4Ydd.png", "kreearra": "https://i.imgur.com/lX8SfgN.png", "kriltsutsaroth": "https://i.imgur.com/hh8cMvp.png", "nex": "https://i.imgur.com/pqiVQBC.png", "generalgraardor": "https://i.imgur.com/hljv9ZW.png"}, DiscChan: s.config.DiscGwdChan}
@@ -356,14 +360,21 @@ func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session
 	// Kick off a scheduled job immediately then at midnight everyday
 	job, err := s.scheduler.Every(1).Day().At("00:00").Do(func() {
 		s.log.Debug("Running Cron Job to update the Hall Of Fame and Collection Log...")
-		s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
-		s.updateColLog(ctx, session)
+		if err := s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues); err != nil {
+			s.log.Error("Failed to update Hall Of Fame :" + err.Error())
+		}
+		if err := s.updateColLog(ctx, session); err != nil {
+			s.log.Error("Failed to update Collection log :" + err.Error())
+		}
 		s.log.Debug("Finished running Cron Job to update the Hall Of Fame and Collection Log!")
 	})
 	if err != nil {
 		// handle the error related to setting up the job
-		fmt.Printf("Job: %#v, Error: %#v", job, err)
+		s.log.Error(fmt.Sprintf("Error creating cron job. Job: %#v, Error: %#v", job, err))
+		return err
 	}
 	job.SingletonMode()
 	s.scheduler.StartAsync()
+
+	return nil
 }

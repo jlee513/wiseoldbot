@@ -13,14 +13,14 @@ updateHOF will iterate over all the HallOfFameRequestInfos, grab the podium from
 of the bosses, sort them, and make the discord call to create the emded with the boss name, image,
 and podium finish with [kc]
 */
-func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) {
+func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) error {
 	for _, requestInfo := range allRequestInfo {
 		s.log.Debug("Running update HOF for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
 			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return
+			return err
 		}
 		var messageIDs []string
 		for _, message := range messages {
@@ -29,7 +29,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 		if err != nil {
 			s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name)
-			return
+			return err
 		}
 
 		// Now add all the bosses
@@ -60,10 +60,12 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				SetColor(0x1c1c1c).SetThumbnail(imageURL).MessageEmbed)
 			if err != nil {
 				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
-				return
+				return err
 			}
 		}
 	}
+
+	return nil
 }
 
 /*
@@ -71,7 +73,7 @@ updateColLog will use all the users within the in memory submission map to creat
 from collectionlog.net and their rankings. It will create an embed with the top 10 placements in
 discord.
 */
-func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
 	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.submissions)
 
 	// Create the leaderboard message that will be sent
@@ -117,7 +119,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "", "")
 	if err != nil {
-		return
+		s.log.Error("Failed to retrieve last 10 messages" + err.Error())
+		return err
 	}
 	var messageIDs []string
 	for _, message := range messages {
@@ -125,7 +128,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
 	if err != nil {
-		return
+		s.log.Error("Failed to bulk delete the collection log" + err.Error())
+		return err
 	}
 
 	// Send the Discord Embed message for collection log
@@ -134,7 +138,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		return
+		s.log.Error("Failed to send discord emded message" + err.Error())
+		return err
 	}
 
 	// Send the Discord Embed message for instructions on how to get on the collection log hall of fame
@@ -149,6 +154,9 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(msg).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		return
+		s.log.Error("Failed to send discord emded message" + err.Error())
+		return err
 	}
+
+	return nil
 }
