@@ -1,21 +1,22 @@
 package main
 
 import (
+	"osrs-disc-bot/config"
 	"osrs-disc-bot/http"
 	"osrs-disc-bot/service"
 )
 
 func main() {
 	// Initialize configuration file
-	config := initializeConfig()
+	cfg := config.InitializeConfig()
 
 	// Initialize the clients that make external calls
 	collectionLog := http.NewCollectionLogClient()
-	sheets := http.NewGoogleSheetsClient(config.SheetsCp, config.SheetsCpSC)
+	sheets := http.NewGoogleSheetsClient(cfg.SheetsCp, cfg.SheetsCpSC)
 	imgur := http.NewImgurClient()
 	temple := http.NewTempleClient()
 
 	// Create the discord bot service and initialize the IRC
-	osrsDiscBotService := service.NewService(config, collectionLog, sheets, imgur, temple)
+	osrsDiscBotService := service.NewService(cfg, collectionLog, sheets, imgur, temple)
 	osrsDiscBotService.StartDiscordIRC()
 }

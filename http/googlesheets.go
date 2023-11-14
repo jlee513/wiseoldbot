@@ -1,7 +1,7 @@
 package http
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"
 	"net/http"
@@ -24,9 +24,13 @@ func NewGoogleSheetsClient(cpSheet string, cpScSheet string) *GoogleSheetsClient
 	return client
 }
 
+/*
+prepGoogleSheet will read the credentials in the client_secret.json in order to retrieve the JWT that
+is used to fetch the spreadsheet. Once fetched, it is returned to whichever function needs it
+*/
 func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	// Create the client with the correct JWT configuration
-	data, err := os.ReadFile("client_secret.json")
+	data, err := os.ReadFile("config/client_secret.json")
 	checkError(err)
 	conf, err := google.JWTConfigFromJSON(data, spreadsheet.Scope)
 	checkError(err)
@@ -42,7 +46,11 @@ func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	return sheet
 }
 
-func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(submissions map[string]int) {
+/*
+InitializeSubmissionsFromSheet will take all the clan points from the CP Google Sheet and populate the
+submissions map for use within the bot
+*/
+func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(ctx context.Context, submissions map[string]int) {
 	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	// Set the in memory submissions map with the Google sheets information
@@ -63,7 +71,11 @@ func (g GoogleSheetsClient) InitializeSubmissionsFromSheet(submissions map[strin
 	}
 }
 
-func (g GoogleSheetsClient) UpdateCpSheet(submissions map[string]int) {
+/*
+UpdateCpSheet will take the submissions map that was being locally updated and save it to the
+CP Google Sheets
+*/
+func (g GoogleSheetsClient) UpdateCpSheet(ctx context.Context, submissions map[string]int) {
 	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
@@ -85,7 +97,15 @@ func (g GoogleSheetsClient) UpdateCpSheet(submissions map[string]int) {
 	checkError(err)
 }
 
-func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(cpscreenshots map[string]string) {
+/*
+UpdateCpScreenshotsSheet will take all the cpscreenshots map and store the imgur link along with the
+people who got that item in the Google Sheet
+*/
+func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
+	// If no screenshots need to be uploaded, skip
+	if len(cpscreenshots) == 0 {
+		return
+	}
 	sheet := g.prepGoogleSheet(g.cpScSheet)
 
 	// Append new rows into the sheets

@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"net/http"
 	"time"
 )
@@ -15,14 +16,14 @@ func NewGoogleSheetsClient() *GoogleSheetsClientMock {
 	return client
 }
 
-func (g *GoogleSheetsClientMock) InitializeSubmissionsFromSheet(submissions map[string]int) {
+func (g *GoogleSheetsClientMock) InitializeSubmissionsFromSheet(ctx context.Context, submissions map[string]int) {
 	return
 }
 
-func (g *GoogleSheetsClientMock) UpdateCpSheet(submissions map[string]int) {
+func (g *GoogleSheetsClientMock) UpdateCpSheet(ctx context.Context, submissions map[string]int) {
 	return
 }
 
-func (g *GoogleSheetsClientMock) UpdateCpScreenshotsSheet(cpscreenshots map[string]string) {
+func (g *GoogleSheetsClientMock) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
 	return
 }

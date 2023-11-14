@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,7 +28,8 @@ func NewTempleClient() *TempleClient {
 	return client
 }
 
-func (t *TempleClient) AddMemberToTemple(addingMember string, templeGroupId string, templeGroupKey string) {
+// AddMemberToTemple will make a POST request to the temple page to add a user to the group
+func (t *TempleClient) AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string) {
 	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + addingMember)
 	req, err := http.NewRequest(http.MethodPost, t.addApiURL, payload)
 	if err != nil {
@@ -42,7 +44,8 @@ func (t *TempleClient) AddMemberToTemple(addingMember string, templeGroupId stri
 	}
 }
 
-func (t *TempleClient) RemoveMemberFromTemple(removingMember string, templeGroupId string, templeGroupKey string) {
+// RemoveMemberFromTemple will make a POST request to the temple page to remove a user from the group
+func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string) {
 	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + removingMember)
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, t.removeApiURL, payload)
@@ -58,7 +61,11 @@ func (t *TempleClient) RemoveMemberFromTemple(removingMember string, templeGroup
 	}
 }
 
-func (t *TempleClient) GetPodiumFromTemple(bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+/*
+GetPodiumFromTemple will take in the bossid and make a request to temple to get the top 3 players
+from our group with the highest kc
+*/
+func (t *TempleClient) GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
 	resp, err := t.client.Get(t.podiumApiURL + bossIdForTemple)
 	if err != nil {
 		fmt.Println(err)

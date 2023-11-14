@@ -6,6 +6,7 @@ require (
 	github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/gemalto/flume v0.13.1
+	github.com/go-co-op/gocron v1.36.0
 	github.com/spf13/viper v1.17.0
 	golang.org/x/net v0.15.0
 	golang.org/x/oauth2 v0.12.0
@@ -19,6 +20,7 @@ require (
 	github.com/ansel1/merry/v2 v2.0.0-beta.10 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -27,6 +29,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
