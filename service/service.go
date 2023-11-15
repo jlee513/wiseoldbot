@@ -6,7 +6,6 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/gemalto/flume"
 	"github.com/go-co-op/gocron"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
