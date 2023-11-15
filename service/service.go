@@ -145,16 +145,69 @@ text and an image in a single message. It will determine how many images and how
 supply the correct number of clan points to everyone in the list
 */
 func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate) {
-	// TODO: If the message content has an imgur link, save it and remove it from the content before proceeding
-	// Currently, it will not work if an imgur link is provded for the submission
+	logger := flume.FromContext(ctx)
+
+	// Defer the deletion of the message
+	defer func(messageId string) {
+		// Once everything is finished, delete the message from the submission channel
+		err := session.ChannelMessageDelete(s.config.DiscSubChan, messageId)
+		if err != nil {
+			logger.Error("Failed to delete channel message: " + err.Error())
+			return
+		}
+	}(message.ID)
+
+	// Remove leading and trailing whitespaces
+	msg := strings.TrimSpace(message.Content)
+	logger.Debug("SUBMISSION MESSAGE: " + msg)
+
+	// First, check if an i.imgur.com URL is used as a submission
+	startOfImgurUrl := strings.Index(msg, "https://i.imgur.com")
+	imgurUrl := ""
+
+	// Only i.imgur.com links will work - other links will throw an error
+	otherUrl := strings.Index(msg, "https://")
+	if startOfImgurUrl == -1 && otherUrl > -1 {
+		logger.Error("Only https://i.imgur.com links are valid: " + msg)
+		msg := "Only https://i.imgur.com links are valid. Either resubmit as an imgur or upload the photo to discord submission message."
+		s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+		return
+	}
+
+	// If we have an i.imgur link, take the link out
+	if startOfImgurUrl > -1 {
+		// We have an imgur link, determine if it's PNG or JPEG
+		endOfUrlPNG := strings.Index(msg, ".png")
+		endOfUrlJPEG := strings.Index(msg, ".jpeg")
+
+		endOfUrl := -1
+		if endOfUrlPNG > -1 {
+			endOfUrl = endOfUrlPNG + 4
+		} else if endOfUrlJPEG > -1 {
+			endOfUrl = endOfUrlJPEG + 5
+		} else {
+			logger.Error("Another image type other than PNG or JPEG was provided.")
+			msg := "Another image type other than PNG or JPEG was provided. Please resubmit with either PNG or JPEG."
+			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+			return
+		}
+
+		imgurUrl = msg[startOfImgurUrl:endOfUrl]
+		// If the start of the URL is at the beginning of the message...
+		if startOfImgurUrl == 0 {
+			// Set the rest of the message after the .png as the message
+			msg = msg[endOfUrl+1:]
+		} else {
+			msg = msg[:startOfImgurUrl-1]
+		}
+	}
 
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 	// instead of running a for loop inside a for loop when adding clan points
-	whitespaceStrippedMessage := strings.Replace(message.Content, ", ", ",", -1)
+	whitespaceStrippedMessage := strings.Replace(msg, ", ", ",", -1)
 	whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
 
-	flume.FromContext(ctx).Debug("Submitted names: " + whitespaceStrippedMessage)
-	flume.FromContext(ctx).Info("Submitted names: " + whitespaceStrippedMessage)
+	logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 
 	names := strings.Split(whitespaceStrippedMessage, ",")
 
@@ -163,25 +216,11 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 	for _, name := range names {
 		// Ensure that this person does not exist in the submissions map currently
 		if _, ok := s.submissions[name]; !ok {
-			// Create a private channel with the user submitting (will reuse if one exists)
-			channel, err := session.UserChannelCreate(message.Author.ID)
-			if err != nil {
-				return
-			}
-
-			// Send a message on that channel
-			_, err = session.ChannelMessageSend(channel.ID, "Non clan member used in this submission. "+
-				"Please add the user: \""+name+"\" using the https://discord.com/channels/1172535371905646612/1173253913303056524 channel and resubmit the screenshot with the names.")
-			if err != nil {
-				return
-			}
-
-			// Once everything is finished, delete the message from the submission channel
-			err = session.ChannelMessageDelete(s.config.DiscSubChan, message.ID)
-			if err != nil {
-				return
-			}
-
+			logger.Error("Non clan member used in this submission: " + name)
+			msg := "Non clan member used in this submission. Please add the user: \"" + name + "\" using the " +
+				"https://discord.com/channels/1172535371905646612/1173253913303056524 channel and resubmit " +
+				"the screenshot with the names."
+			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 			return
 		}
 	}
@@ -189,27 +228,47 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 	// Allow for more than 1 image per submission
 	numberOfSubmissions := 0
 
-	// Iterate through all the pictures and download them
-	for _, submissionPicture := range message.Attachments {
-		// If it's an imgur link, save the link in the cpscreenshots map
-		if strings.Contains(submissionPicture.ProxyURL, "imgur") {
-			s.cpscreenshots[submissionPicture.ProxyURL] = whitespaceStrippedMessage
-		} else if strings.Contains(submissionPicture.ProxyURL, "media.discordapp.net") {
-			// Retrieve the access token
-			accessToken := s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
-
-			// Retrieve the bytes of the image
-			resp, err := s.client.Get(submissionPicture.ProxyURL)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer resp.Body.Close()
-
-			submissionUrl := s.imgur.Upload(ctx, accessToken, resp.Body)
-			s.cpscreenshots[submissionUrl] = whitespaceStrippedMessage
-		} else {
-		}
+	// If there is an imgur URL, there won't be an attachment to the submission
+	if len(imgurUrl) > 0 {
+		s.cpscreenshots[imgurUrl] = whitespaceStrippedMessage
 		numberOfSubmissions++
+	} else {
+		// Iterate through all the pictures and download them
+		for _, submissionPicture := range message.Attachments {
+			if !strings.Contains(submissionPicture.ContentType, "image") {
+				// Invalid submission
+				logger.Error("Invalid submission content. Submitted type: " + submissionPicture.ContentType)
+				msg := "Only image attachments are allowed. Either resubmit as an imgur or upload the attachment as a photo to the discord submission message."
+				s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+				return
+			}
+			logger.Info(submissionPicture.ContentType)
+			// If it's an imgur link, save the link in the cpscreenshots map
+			if strings.Contains(submissionPicture.ProxyURL, "media.discordapp.net") {
+				// Retrieve the access token
+				accessToken := s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+
+				// Retrieve the bytes of the image
+				resp, err := s.client.Get(submissionPicture.ProxyURL)
+				if err != nil {
+					logger.Error("Failed to download discord image: " + err.Error())
+					msg := "Failed to download discord image - please wait before trying again."
+					s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+					return
+				}
+				defer resp.Body.Close()
+
+				submissionUrl := s.imgur.Upload(ctx, accessToken, resp.Body)
+				s.cpscreenshots[submissionUrl] = whitespaceStrippedMessage
+			} else {
+				// Invalid submission
+				logger.Error("INVALID SUBMISSION: " + submissionPicture.ProxyURL)
+				msg := "Invalid submission - please upload the picture to imgur before submitting again."
+				s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+				return
+			}
+			numberOfSubmissions++
+		}
 	}
 
 	// Iterate over the all the names in the submissions and add the number of submissions to their clan points
@@ -218,17 +277,12 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 	}
 
 	// Update the #cp-leaderboard
-	s.updateLeaderboard(session)
-
-	// Once everything is finished, delete the message from the submission channel
-	err := session.ChannelMessageDelete(s.config.DiscSubChan, message.ID)
-	if err != nil {
-		return
-	}
+	s.updateLeaderboard(ctx, session)
 }
 
 // updateLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
-func (s *Service) updateLeaderboard(session *discordgo.Session) {
+func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
 	// Update the #cp-leaderboard
 	keys := make([]string, 0, len(s.submissions))
 	for key := range s.submissions {
@@ -249,10 +303,12 @@ func (s *Service) updateLeaderboard(session *discordgo.Session) {
 	// Retrieve the one channel message and delete it in the leaderboard channel
 	messages, err := session.ChannelMessages(s.config.DiscLeaderboardChan, 1, "", "", "")
 	if err != nil {
+		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 	err = session.ChannelMessageDelete(s.config.DiscLeaderboardChan, messages[0].ID)
 	if err != nil {
+		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 
@@ -262,6 +318,7 @@ func (s *Service) updateLeaderboard(session *discordgo.Session) {
 		SetDescription(fmt.Sprintf(leaderboard)).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
 	if err != nil {
+		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 }
@@ -273,13 +330,18 @@ as with the removal of an existing member
 func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate) {
 	//TODO: SCRUB THE USERNAME SUBMITTED
 	// Don't include the remove command in the RSN
+	logger := flume.FromContext(ctx)
 	member := strings.Replace(message.Content, "!rm ", "", -1)
 
-	// Create a private channel with the user submitting (will reuse if one exists)
-	channel, err := session.UserChannelCreate(message.Author.ID)
-	if err != nil {
-		return
-	}
+	// Defer the deletion of the message
+	defer func(messageId string) {
+		// Once everything is finished, delete the message from the submission channel
+		err := session.ChannelMessageDelete(s.config.DiscSignUpChan, message.ID)
+		if err != nil {
+			logger.Error("Failed to delete channel message: " + err.Error())
+			return
+		}
+	}(message.ID)
 
 	// Remove user from temple if the message prefix is "rm"
 	re := regexp.MustCompile("(?i)^(!rm)\\s+.+$") // Case-insensitive. Must start with "!rm". Must have atleast one space between "!rm" and the username. There must be text after "!rm". We use "!" at the beginning in case a user's name starts with "rm".
@@ -290,23 +352,15 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 		if _, ok := s.submissions[member]; ok {
 			s.submissions[member] = 0
 
-			// Send the successful removal message in the previously created private channel
-			_, err := session.ChannelMessageSend(channel.ID, "You have successfully removed a member: "+member)
-			if err != nil {
-				return
-			}
+			logger.Debug("You have successfully removed a member: " + member)
+			msg := "You have successfully removed a member: " + member
+			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
+
 		} else {
 			// Send the failed removal message in the previously created private channel
-			_, err := session.ChannelMessageSend(channel.ID, "Member: "+member+" does not exist.")
-			if err != nil {
-				return
-			}
-		}
-
-		// Once everything is finished, delete the message from the submission channel
-		err = session.ChannelMessageDelete(s.config.DiscSignUpChan, message.ID)
-		if err != nil {
-			return
+			logger.Error("Member: " + member + " does not exist.")
+			msg := "Member: " + member + " does not exist."
+			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 		}
 
 		// Don't continue because the following code is to add a user
@@ -316,28 +370,20 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 	// Ensure that this person does not exist in the submissions map currently
 	if _, ok := s.submissions[member]; ok {
 		// Send the failed addition message in the previously created private channel
-		_, err := session.ChannelMessageSend(channel.ID, "Member: "+member+" already exists.")
-		if err != nil {
-			return
-		}
+		logger.Error("Member: " + member + " already exists.")
+		msg := "Member: " + member + " already exists."
+		s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 	} else {
 		s.submissions[member] = 0
 
-		// Send the successful addition message in the previously created private channel
-		_, err := session.ChannelMessageSend(channel.ID, "You have successfully added new member: "+member)
-		if err != nil {
-			return
-		}
+		logger.Debug("You have successfully added a new member: " + member)
+		msg := "You have successfully added a new member: " + member
+		s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 	}
 
 	// Add the user to the temple page
 	s.temple.AddMemberToTemple(ctx, member, s.config.TempleGroupId, s.config.TempleGroupKey)
 
-	// Once everything is finished, delete the message from the submission channel
-	err = session.ChannelMessageDelete(s.config.DiscSignUpChan, message.ID)
-	if err != nil {
-		return
-	}
 }
 
 // kickOffHOFCron will instantiate the HallOfFameRequestInfos and kick off the cron job
@@ -366,4 +412,21 @@ func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session
 	}
 	job.SingletonMode()
 	s.scheduler.StartAsync()
+}
+
+func (s *Service) sendPrivateMessage(ctx context.Context, session *discordgo.Session, userId string, message string) {
+	logger := flume.FromContext(ctx)
+	// Create a private channel with the user submitting (will reuse if one exists)
+	channel, err := session.UserChannelCreate(userId)
+	if err != nil {
+		logger.Error("Failed to create private message with the user: " + err.Error())
+		return
+	}
+
+	// Send a message on that channel
+	_, err = session.ChannelMessageSend(channel.ID, message)
+	if err != nil {
+		logger.Error("Failed to send private message to the user: " + err.Error())
+		return
+	}
 }
