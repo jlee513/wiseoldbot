@@ -29,7 +29,7 @@ func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, submission
 	leaguePodium := make(map[string]int)
 
 	for player, _ := range submissions {
-		resp, err := r.client.Get(r.leaguesUrl + "{" + player + "}")
+		resp, err := r.client.Get(r.leaguesUrl + player)
 		if err != nil {
 			logger.Error("Failed to get Runescape leagues info from: " + player)
 			return nil, nil
