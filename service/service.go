@@ -25,6 +25,7 @@ type Service struct {
 	sheets        sheets
 	imgur         imgur
 	temple        temple
+	runescape     runescape
 
 	submissions   map[string]int
 	cpscreenshots map[string]string
@@ -37,7 +38,7 @@ type Service struct {
 	scheduler *gocron.Scheduler
 }
 
-func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imgur imgur, temple temple) *Service {
+func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imgur imgur, temple temple, runescape runescape) *Service {
 	logger := flume.New("service")
 	if config.LogDebug {
 		_ = flume.Configure(flume.Config{Development: true, Levels: "*"})
@@ -52,6 +53,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		sheets:        sheets,
 		imgur:         imgur,
 		temple:        temple,
+		runescape:     runescape,
 
 		submissions:   make(map[string]int),
 		cpscreenshots: make(map[string]string),
@@ -93,11 +95,7 @@ func (s *Service) StartDiscordIRC() {
 		}
 	}(session)
 
-	// Kick off gocron for updating the Hall Of fame
-	if err := s.kickOffHOFCron(ctx, session); err != nil {
-		s.log.Error("Failed to start Cron Job: " + err.Error())
-		panic(err)
-	}
+	s.kickOffCron(ctx, session)
 	s.log.Info("OSRS Disc Bot is now online!")
 
 	// Block so that it continues to run the bot
@@ -389,8 +387,8 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 
 }
 
-// kickOffHOFCron will instantiate the HallOfFameRequestInfos and kick off the cron job
-func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session) error {
+// kickOffCron will instantiate the HallOfFameRequestInfos and kick off the cron job
+func (s *Service) kickOffCron(ctx context.Context, session *discordgo.Session) {
 	s.log.Info("Initializing Hall Of Fame Cron Job...")
 	slayerBosses := util.HallOfFameRequestInfo{Name: "Slayer Bosses", Bosses: map[string]string{"sire": "https://i.imgur.com/GhbmqEB.png", "hydra": "https://i.imgur.com/25GU0Ph.png", "cerberus": "https://i.imgur.com/UoxGuQi.png", "grotesqueguardians": "https://i.imgur.com/M7ylVBZ.png", "kraken": "https://i.imgur.com/Q6EbJb1.png", "smokedevil": "https://i.imgur.com/2AYntQ5.png"}, DiscChan: s.config.DiscSlayerBossesChan}
 	gwd := util.HallOfFameRequestInfo{Name: "GWD Bosses", Bosses: map[string]string{"commanderzilyana": "https://i.imgur.com/aNm4Ydd.png", "kreearra": "https://i.imgur.com/lX8SfgN.png", "kriltsutsaroth": "https://i.imgur.com/hh8cMvp.png", "nex": "https://i.imgur.com/pqiVQBC.png", "generalgraardor": "https://i.imgur.com/hljv9ZW.png"}, DiscChan: s.config.DiscGwdChan}
@@ -404,24 +402,21 @@ func (s *Service) kickOffHOFCron(ctx context.Context, session *discordgo.Session
 
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
-		s.log.Debug("Running Cron Job to update the Hall Of Fame and Collection Log...")
-		if err := s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues); err != nil {
-			s.log.Error("Failed to update Hall Of Fame :" + err.Error())
-		}
-		if err := s.updateColLog(ctx, session); err != nil {
-			s.log.Error("Failed to update Collection log :" + err.Error())
-		}
-		s.log.Debug("Finished running Cron Job to update the Hall Of Fame and Collection Log!")
+		s.log.Debug("Running Cron Job to update the Hall Of Fame, Collection Log, and Leagues...")
+		s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
+		s.updateColLog(ctx, session)
+		s.updateLeagues(ctx, session)
+		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Leagues!")
 	})
 	if err != nil {
 		// handle the error related to setting up the job
 		s.log.Error(fmt.Sprintf("Error creating cron job. Job: %#v, Error: %#v", job, err))
-		return err
+		return
 	}
 	job.SingletonMode()
 	s.scheduler.StartAsync()
 
-	return nil
+	return
 }
 
 func (s *Service) sendPrivateMessage(ctx context.Context, session *discordgo.Session, userId string, message string) {
