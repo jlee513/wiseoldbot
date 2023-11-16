@@ -58,7 +58,7 @@ func (c CollectionLogClient) RetrieveCollectionLogAndOrder(ctx context.Context, 
 			// number of uniques this player has
 			collectionLog[player] = col.CollectionLog.Uniques
 		} else if resp.StatusCode == http.StatusNotFound {
-			fmt.Println("Missing user: " + player)
+			fmt.Println("Missing user for collection log: " + player)
 			continue
 		}
 	}

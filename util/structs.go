@@ -16,6 +16,7 @@ type Config struct {
 	DiscPVPChan          string `mapstructure:"DISCORD_PVP_CHANNEL"`
 	DiscCluesChan        string `mapstructure:"DISCORD_CLUES_CHANNEL"`
 	DiscColChan          string `mapstructure:"DISCORD_COL_CHANNEL"`
+	DiscLeaguesChan      string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	TempleGroupId        string `mapstructure:"TEMPLE_GROUP_ID"`
 	TempleGroupKey       string `mapstructure:"TEMPLE_GROUP_KEY"`
 	SheetsCp             string `mapstructure:"SHEETS_CP"`
@@ -26,6 +27,11 @@ type Config struct {
 	ImgurRefreshToken    string `mapstructure:"IMGUR_REFRESH_TOKEN"`
 	LogDebug             bool   `mapstructure:"LOG_DEBUG"`
 	CronKickoffTime      string `mapstructure:"CRON_KICKOFF_TIME"`
+}
+
+type PodiumLeaguePoints struct {
+	Player string `json:"player"`
+	Points int    `json:"points"`
 }
 
 type HallOfFameInfo struct {

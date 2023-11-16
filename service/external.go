@@ -28,3 +28,7 @@ type temple interface {
 	RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string)
 	GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
 }
+
+type runescape interface {
+	GetLeaguesPodiumFromRS(ctx context.Context, submissions map[string]int) (map[string]int, []string)
+}
