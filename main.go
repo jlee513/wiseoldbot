@@ -15,8 +15,9 @@ func main() {
 	sheets := http.NewGoogleSheetsClient(cfg.SheetsCp, cfg.SheetsCpSC)
 	imgur := http.NewImgurClient()
 	temple := http.NewTempleClient()
+	runescape := http.NewRunescapeClient()
 
 	// Create the discord bot service and initialize the IRC
-	osrsDiscBotService := service.NewService(cfg, collectionLog, sheets, imgur, temple)
+	osrsDiscBotService := service.NewService(cfg, collectionLog, sheets, imgur, temple, runescape)
 	osrsDiscBotService.StartDiscordIRC()
 }

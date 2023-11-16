@@ -152,3 +152,39 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		return
 	}
 }
+
+func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {
+	// First, delete all the messages within the channel
+	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "", "")
+	if err != nil {
+		s.log.Error("Failed to get all messages for deletion from the leagues podium channel")
+		return
+	}
+	var messageIDs []string
+	for _, message := range messages {
+		messageIDs = append(messageIDs, message.ID)
+	}
+	err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
+	if err != nil {
+		s.log.Error("Failed to delete all messages from the leagues podium channel")
+		return
+	}
+
+	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.submissions)
+	// Iterate over the players to get the different places for users to create the placements
+	// Create the leaderboard message that will be sent
+	placements := ""
+	for placement, player := range ranking {
+		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(leaguesPodium[player]) + "]\n"
+	}
+
+	// Send the Discord Embed message for the boss podium finish
+	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaguesChan, embed.NewEmbed().
+		SetTitle("Ponies League Standings").
+		SetDescription(placements).
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+	if err != nil {
+		s.log.Error("Failed to send message for leagues podium")
+		return
+	}
+}
