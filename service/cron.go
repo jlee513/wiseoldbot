@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
 	"osrs-disc-bot/util"
 	"strconv"
+
+	embed "github.com/Clinet/discordgo-embed"
+	"github.com/bwmarrin/discordgo"
 )
 
 /*
@@ -15,7 +16,7 @@ and podium finish with [kc]
 */
 func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) error {
 	for _, requestInfo := range allRequestInfo {
-		s.log.Debug("Running update HOF for Boss: " + requestInfo.Name)
+		s.log.Info("Running HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
@@ -65,6 +66,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		}
 	}
 
+	s.log.Info("HOF update successful.")
 	return nil
 }
 
@@ -74,6 +76,8 @@ from collectionlog.net and their rankings. It will create an embed with the top 
 discord.
 */
 func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
+	s.log.Info("Running collection log hiscores update...")
+
 	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.submissions)
 
 	// Create the leaderboard message that will be sent
@@ -158,14 +162,17 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		return err
 	}
 
+	s.log.Info("Collection log hiscores update successful.")
 	return nil
 }
 
 func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {
+	s.log.Info("Running leagues hiscores update.")
+
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "", "")
 	if err != nil {
-		s.log.Error("Failed to get all messages for deletion from the leagues podium channel")
+		s.log.Error("Failed to get all messages for deletion from the leagues podium channel.")
 		return
 	}
 	var messageIDs []string
@@ -174,7 +181,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel")
+		s.log.Error("Failed to delete all messages from the leagues podium channel.")
 		return
 	}
 
@@ -192,7 +199,9 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send message for leagues podium")
+		s.log.Error("Failed to send message for leagues podium.")
 		return
 	}
+
+	s.log.Info("Leagues hiscores update successful.")
 }

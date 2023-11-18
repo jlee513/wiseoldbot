@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/gemalto/flume"
 )
 
 type TempleClient struct {
@@ -30,33 +32,39 @@ func NewTempleClient() *TempleClient {
 
 // AddMemberToTemple will make a POST request to the temple page to add a user to the group
 func (t *TempleClient) AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string) {
+	logger := flume.FromContext(ctx)
+	logger.Info("Attempting to add new user to temple group: " + addingMember)
+
 	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + addingMember)
 	req, err := http.NewRequest(http.MethodPost, t.addApiURL, payload)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Error while creating request: ", err.Error())
 		return
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	_, err = t.client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Error while executing call to temple API: ", err.Error())
 		return
 	}
 }
 
 // RemoveMemberFromTemple will make a POST request to the temple page to remove a user from the group
 func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string) {
+	logger := flume.FromContext(ctx)
+	logger.Info("Attempting to remove user from temple group: " + removingMember)
+
 	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + removingMember)
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, t.removeApiURL, payload)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Error while creating request: ", err.Error())
 		return
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error("Error while executing call to temple API: ", err.Error())
 		return
 	}
 }
@@ -66,9 +74,11 @@ GetPodiumFromTemple will take in the bossid and make a request to temple to get 
 from our group with the highest kc
 */
 func (t *TempleClient) GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+	logger := flume.FromContext(ctx)
+
 	resp, err := t.client.Get(t.podiumApiURL + bossIdForTemple)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(fmt.Sprintf("Error while retrieving %s stats from temple API: ", bossIdForTemple), err.Error())
 		return nil, nil
 	}
 	defer resp.Body.Close()
@@ -76,6 +86,7 @@ func (t *TempleClient) GetPodiumFromTemple(ctx context.Context, bossIdForTemple 
 	if resp.StatusCode == http.StatusOK {
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
+			logger.Error("Error while reading response from temple: ", err.Error())
 			return nil, nil
 		}
 
@@ -83,7 +94,7 @@ func (t *TempleClient) GetPodiumFromTemple(ctx context.Context, bossIdForTemple 
 		var f util.HallOfFameInfo
 		err = json.Unmarshal(bodyBytes, &f)
 		if err != nil {
-			fmt.Println("Error parsing JSON: ", err)
+			logger.Error("Error parsing JSON: ", err.Error())
 			return nil, nil
 		}
 
