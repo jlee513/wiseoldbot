@@ -5,6 +5,7 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"osrs-disc-bot/util"
+	"sort"
 	"strconv"
 )
 
@@ -14,6 +15,8 @@ of the bosses, sort them, and make the discord call to create the emded with the
 and podium finish with [kc]
 */
 func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) {
+	hofLeaderboard := make(map[string]int)
+
 	for _, requestInfo := range allRequestInfo {
 		s.log.Debug("Running update HOF for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
@@ -42,12 +45,15 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				switch k {
 				case 1:
 					placements = placements + ":first_place: "
+					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 3)
 					break
 				case 2:
 					placements = placements + ":second_place: "
+					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 2)
 					break
 				case 3:
 					placements = placements + ":third_place: "
+					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 1)
 					break
 				}
 				placements = placements + podium.Data.Players[k].Username + " [" + strconv.Itoa(podium.Data.Players[k].Kc) + "]\n"
@@ -63,6 +69,73 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				return
 			}
 		}
+	}
+
+	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
+}
+
+func (s *Service) addToHOFLeaderboard(hofLeaderboard map[string]int, player string, points int) {
+	if _, ok := hofLeaderboard[player]; ok {
+		hofLeaderboard[player] = hofLeaderboard[player] + points
+	} else {
+		hofLeaderboard[player] = points
+	}
+}
+
+func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.Session, hofLeaderboard map[string]int) {
+	keys := make([]string, 0, len(hofLeaderboard))
+	for key := range hofLeaderboard {
+		keys = append(keys, key)
+	}
+
+	// Sort the map based on the values
+	sort.SliceStable(keys, func(i, j int) bool {
+		return hofLeaderboard[keys[i]] > hofLeaderboard[keys[j]]
+	})
+
+	// First, delete all the messages within the channel
+	messages, err := session.ChannelMessages(s.config.DiscHOFLeaderboardChan, 50, "", "", "")
+	if err != nil {
+		s.log.Error("Failed to get all messages for deletion from the leagues podium channel")
+		return
+	}
+	var messageIDs []string
+	for _, message := range messages {
+		messageIDs = append(messageIDs, message.ID)
+	}
+	err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
+	if err != nil {
+		s.log.Error("Failed to delete all messages from the leagues podium channel")
+		return
+	}
+
+	// Iterate over the players to get the different places for users to create the placements
+	// Create the leaderboard message that will be sent
+	placements := ""
+	for placement, player := range keys {
+		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(hofLeaderboard[player]) + "]\n"
+	}
+
+	// Send the Discord Embed message for the leaderboard
+	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
+		SetTitle("Ponies HOF Leaderboard").
+		SetDescription(placements).
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+	if err != nil {
+		s.log.Error("Failed to send message for leagues podium")
+		return
+	}
+
+	// Send the Discord Embed message for instructions on how the rankings work
+	var msg string
+	msg = msg + "In order to get onto this leaderboard, you must have a podium finish of one of the HOF Bosses.\n\n"
+	msg = msg + "3 points for :first_place:\n2 points for :second_place:\n1 points for :third_place:"
+	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
+		SetTitle("How To Get Onto The Collection Log HOF").
+		SetDescription(msg).
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+	if err != nil {
+		return
 	}
 }
 
@@ -173,8 +246,34 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.submissions)
 	// Iterate over the players to get the different places for users to create the placements
 	// Create the leaderboard message that will be sent
-	placements := ""
+	placements := "__**TIER 8**__\n"
+	tier := 8
+	var t8, t7, t6, t5, t4, t3, t2 = 24000, 15000, 7500, 4000, 2000, 1200, 500
+
 	for placement, player := range ranking {
+		if tier == 8 && leaguesPodium[player] < t8 {
+			tier = 7
+			placements = placements + "\n__**TIER 7**__\n"
+		} else if tier == 7 && leaguesPodium[player] < t7 {
+			tier = 6
+			placements = placements + "\n__**TIER 6**__\n"
+		} else if tier == 6 && leaguesPodium[player] < t6 {
+			tier = 5
+			placements = placements + "\n__**TIER 5**__\n"
+		} else if tier == 5 && leaguesPodium[player] < t5 {
+			tier = 4
+			placements = placements + "\n__**TIER 4**__\n"
+		} else if tier == 4 && leaguesPodium[player] < t4 {
+			tier = 3
+			placements = placements + "\n__**TIER 3**__\n"
+		} else if tier == 3 && leaguesPodium[player] < t3 {
+			tier = 2
+			placements = placements + "\n__**TIER 2**__\n"
+		} else if tier == 2 && leaguesPodium[player] < t2 {
+			tier = 1
+			placements = placements + "\n__**TIER 1**__\n"
+		}
+
 		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(leaguesPodium[player]) + "]\n"
 	}
 
