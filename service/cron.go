@@ -246,29 +246,29 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.submissions)
 	// Iterate over the players to get the different places for users to create the placements
 	// Create the leaderboard message that will be sent
-	placements := "__**TIER 8**__\n"
+	placements := "<:Executioner:1176594739366219806> __**TIER 8**__ <:Executioner:1176594739366219806>\n"
 	tier := 8
 	var t8, t7, t6, t5, t4, t3, t2 = 24000, 15000, 7500, 4000, 2000, 1200, 500
 
 	for placement, player := range ranking {
 		if tier == 8 && leaguesPodium[player] < t8 {
 			tier = 7
-			placements = placements + "\n__**TIER 7**__\n"
+			placements = placements + "\n<:Weapon_Master:1176595216338260060>__**TIER 7**__<:Weapon_Master:1176595216338260060>\n"
 		} else if tier == 7 && leaguesPodium[player] < t7 {
 			tier = 6
-			placements = placements + "\n__**TIER 6**__\n"
+			placements = placements + "\n<:Ruinous_Powers:1176595214828318741>__**TIER 6**__<:Ruinous_Powers:1176595214828318741>\n"
 		} else if tier == 6 && leaguesPodium[player] < t6 {
 			tier = 5
-			placements = placements + "\n__**TIER 5**__\n"
+			placements = placements + "\n<:Bloodthirsty:1176595214014623834>__**TIER 5**__<:Bloodthirsty:1176595214014623834>\n"
 		} else if tier == 5 && leaguesPodium[player] < t5 {
 			tier = 4
-			placements = placements + "\n__**TIER 4**__\n"
+			placements = placements + "\n<:Brawlers_Resolve:1176595213280628856>__**TIER 4**__<:Brawlers_Resolve:1176595213280628856>\n"
 		} else if tier == 4 && leaguesPodium[player] < t4 {
 			tier = 3
-			placements = placements + "\n__**TIER 3**__\n"
+			placements = placements + "\n<:Fire_Sale:1176595212219453441>__**TIER 3**__<:Fire_Sale:1176595212219453441>\n"
 		} else if tier == 3 && leaguesPodium[player] < t3 {
 			tier = 2
-			placements = placements + "\n__**TIER 2**__\n"
+			placements = placements + "\n<:Globetrotter:1176595211833577482>__**TIER 2**__<:Globetrotter:1176595211833577482>\n"
 		} else if tier == 2 && leaguesPodium[player] < t2 {
 			tier = 1
 			placements = placements + "\n__**TIER 1**__\n"
