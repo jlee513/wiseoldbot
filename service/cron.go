@@ -246,8 +246,34 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.submissions)
 	// Iterate over the players to get the different places for users to create the placements
 	// Create the leaderboard message that will be sent
-	placements := ""
+	placements := "__**TIER 8**__\n"
+	tier := 8
+	var t8, t7, t6, t5, t4, t3, t2 = 24000, 15000, 7500, 4000, 2000, 1200, 500
+
 	for placement, player := range ranking {
+		if tier == 8 && leaguesPodium[player] < t8 {
+			tier = 7
+			placements = placements + "\n__**TIER 7**__\n"
+		} else if tier == 7 && leaguesPodium[player] < t7 {
+			tier = 6
+			placements = placements + "\n__**TIER 6**__\n"
+		} else if tier == 6 && leaguesPodium[player] < t6 {
+			tier = 5
+			placements = placements + "\n__**TIER 5**__\n"
+		} else if tier == 5 && leaguesPodium[player] < t5 {
+			tier = 4
+			placements = placements + "\n__**TIER 4**__\n"
+		} else if tier == 4 && leaguesPodium[player] < t4 {
+			tier = 3
+			placements = placements + "\n__**TIER 3**__\n"
+		} else if tier == 3 && leaguesPodium[player] < t3 {
+			tier = 2
+			placements = placements + "\n__**TIER 2**__\n"
+		} else if tier == 2 && leaguesPodium[player] < t2 {
+			tier = 1
+			placements = placements + "\n__**TIER 1**__\n"
+		}
+
 		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(leaguesPodium[player]) + "]\n"
 	}
 
