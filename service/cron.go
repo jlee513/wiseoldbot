@@ -36,8 +36,9 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		}
 
 		// Now add all the bosses
-		for bossIdForTemple, imageURL := range requestInfo.Bosses {
-			podium, rankings := s.temple.GetPodiumFromTemple(ctx, bossIdForTemple)
+		for _, bossInfo := range requestInfo.Bosses {
+			podium, rankings := s.temple.GetPodiumFromTemple(ctx, bossInfo.BossName)
+			s.log.Debug("Updating " + podium.Data.BossName)
 
 			// Iterate over the players to get the different places for users to create the placements
 			placements := ""
@@ -63,7 +64,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 			_, err = session.ChannelMessageSendEmbed(requestInfo.DiscChan, embed.NewEmbed().
 				SetTitle(podium.Data.BossName).
 				SetDescription(placements).
-				SetColor(0x1c1c1c).SetThumbnail(imageURL).MessageEmbed)
+				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
 			if err != nil {
 				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
 				return
