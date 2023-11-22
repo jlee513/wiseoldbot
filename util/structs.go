@@ -49,8 +49,13 @@ type Player struct {
 
 type HallOfFameRequestInfo struct {
 	Name     string
-	Bosses   map[string]string
+	Bosses   []BossInfo
 	DiscChan string
+}
+
+type BossInfo struct {
+	BossName  string
+	ImageLink string
 }
 
 type CollectionLogInfo struct {
