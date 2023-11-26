@@ -3,11 +3,9 @@ package service
 import (
 	"context"
 	"osrs-disc-bot/util"
-	"strconv"
-
+	
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
-	"osrs-disc-bot/util"
 	"sort"
 	"strconv"
 )
@@ -26,7 +24,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
 			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return err
+			return 
 		}
 		var messageIDs []string
 		for _, message := range messages {
@@ -35,7 +33,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 		if err != nil {
 			s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name)
-			return err
+			return 
 		}
 
 		// Now add all the bosses
@@ -70,7 +68,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
 			if err != nil {
 				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
-				return err
+				return 
 			}
 		}
 	}
