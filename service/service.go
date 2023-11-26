@@ -508,14 +508,14 @@ func (s *Service) sendPrivateMessage(ctx context.Context, session *discordgo.Ses
 	// Create a private channel with the user submitting (will reuse if one exists)
 	channel, err := session.UserChannelCreate(userId)
 	if err != nil {
-		logger.Error("Failed to create private message with the user: " + err.Error())
+		logger.Error("Failed to create private message for user: " + err.Error())
 		return
 	}
 
 	// Send a message on that channel
 	_, err = session.ChannelMessageSend(channel.ID, message)
 	if err != nil {
-		logger.Error("Failed to send private message to the user: " + err.Error())
+		logger.Error("Failed to send private message for user: " + err.Error())
 		return
 	}
 }
