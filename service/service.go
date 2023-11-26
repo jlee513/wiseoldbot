@@ -3,10 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	embed "github.com/Clinet/discordgo-embed"
-	"github.com/gemalto/flume"
-	"github.com/go-co-op/gocron"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +13,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	embed "github.com/Clinet/discordgo-embed"
+	"github.com/gemalto/flume"
+	"github.com/go-co-op/gocron"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -77,7 +77,8 @@ func (s *Service) StartDiscordIRC() {
 	// Create a new discord session
 	session, err := discordgo.New("Bot " + s.config.DiscBotToken)
 	if err != nil {
-		log.Fatal(err)
+		s.log.Error("Failed to start discord bot: " + err.Error())
+		panic(err)
 	}
 
 	// Create handler for listening for submission messages
@@ -91,11 +92,10 @@ func (s *Service) StartDiscordIRC() {
 	defer func(discord *discordgo.Session) {
 		err := discord.Close()
 		if err != nil {
-
+			s.log.Error("Failed to stop discord bot: " + err.Error())
 		}
 	}(session)
 
-	// Kick off gocron for updating the Hall Of fame
 	s.kickOffCron(ctx, session)
 	s.log.Info("OSRS Disc Bot is now online!")
 
@@ -148,6 +148,7 @@ supply the correct number of clan points to everyone in the list
 */
 func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate) {
 	logger := flume.FromContext(ctx)
+	logger.Info("Clan Point submission triggered.")
 
 	// Defer the deletion of the message
 	defer func(messageId string) {
@@ -280,11 +281,15 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 
 	// Update the #cp-leaderboard
 	s.updateLeaderboard(ctx, session)
+
+	logger.Info("Clan Point submission successful.")
 }
 
 // updateLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
 func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session) {
 	logger := flume.FromContext(ctx)
+	logger.Info("Running clan point leaderboard update...")
+
 	// Update the #cp-leaderboard
 	keys := make([]string, 0, len(s.submissions))
 	for key := range s.submissions {
@@ -305,12 +310,12 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 	// Retrieve the one channel message and delete it in the leaderboard channel
 	messages, err := session.ChannelMessages(s.config.DiscLeaderboardChan, 1, "", "", "")
 	if err != nil {
-		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL.")
 		return
 	}
 	err = session.ChannelMessageDelete(s.config.DiscLeaderboardChan, messages[0].ID)
 	if err != nil {
-		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL.")
 		return
 	}
 
@@ -320,9 +325,11 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 		SetDescription(fmt.Sprintf(leaderboard)).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
 	if err != nil {
-		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL")
+		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL.")
 		return
 	}
+
+	logger.Info("Clan point leaderboard update successful.")
 }
 
 /*
@@ -349,12 +356,12 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 	re := regexp.MustCompile("(?i)^(!rm)\\s+.+$") // Case-insensitive. Must start with "!rm". Must have atleast one space between "!rm" and the username. There must be text after "!rm". We use "!" at the beginning in case a user's name starts with "rm".
 	if re.Match([]byte(message.Content)) {
 		// Remove the user from the temple page
-		s.temple.RemoveMemberFromTemple(ctx, member, s.config.TempleGroupId, s.config.TempleGroupKey)
 
 		if _, ok := s.submissions[member]; ok {
-			s.submissions[member] = 0
+			delete(s.submissions, member)
 
-			logger.Debug("You have successfully removed a member: " + member)
+			s.temple.RemoveMemberFromTemple(ctx, member, s.config.TempleGroupId, s.config.TempleGroupKey)
+			logger.Info("Successfully removed user from temple group: " + member)
 			msg := "You have successfully removed a member: " + member
 			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 
@@ -378,14 +385,11 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 	} else {
 		s.submissions[member] = 0
 
-		logger.Debug("You have successfully added a new member: " + member)
+		s.temple.AddMemberToTemple(ctx, member, s.config.TempleGroupId, s.config.TempleGroupKey)
+		logger.Info("Successfully added new user to temple group: " + member)
 		msg := "You have successfully added a new member: " + member
 		s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 	}
-
-	// Add the user to the temple page
-	s.temple.AddMemberToTemple(ctx, member, s.config.TempleGroupId, s.config.TempleGroupKey)
-
 }
 
 // kickOffCron will instantiate the HallOfFameRequestInfos and kick off the cron job
@@ -490,10 +494,13 @@ func (s *Service) kickOffCron(ctx context.Context, session *discordgo.Session) {
 	})
 	if err != nil {
 		// handle the error related to setting up the job
-		fmt.Printf("Job: %#v, Error: %#v", job, err)
+		s.log.Error(fmt.Sprintf("Error creating cron job. Job: %#v, Error: %#v", job, err))
+		return
 	}
 	job.SingletonMode()
 	s.scheduler.StartAsync()
+
+	return
 }
 
 func (s *Service) sendPrivateMessage(ctx context.Context, session *discordgo.Session, userId string, message string) {
