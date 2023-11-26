@@ -220,7 +220,7 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 		if _, ok := s.submissions[name]; !ok {
 			logger.Error("Non clan member used in this submission: " + name)
 			msg := "Non clan member used in this submission. Please add the user: \"" + name + "\" using the " +
-				"https://discord.com/channels/1172535371905646612/1173253913303056524 channel and resubmit " +
+				"https://discord.com/channels/1172535371905646612/1176891514325057566 channel and resubmit " +
 				"the screenshot with the names."
 			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 			return
@@ -479,8 +479,6 @@ func (s *Service) kickOffCron(ctx context.Context, session *discordgo.Session) {
 		{BossName: "cluemaster", ImageLink: "https://i.imgur.com/12rCLVv.png"},
 		{BossName: "clueall", ImageLink: "https://i.imgur.com/wX3Ei7U.png"},
 	}}
-
-	s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
 
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
