@@ -221,7 +221,7 @@ func (s *Service) listenForCPSubmission(ctx context.Context, session *discordgo.
 		if _, ok := s.submissions[name]; !ok {
 			logger.Error("Non clan member used in this submission: " + name)
 			msg := "Non clan member used in this submission. Please add the user: \"" + name + "\" using the " +
-				"https://discord.com/channels/1172535371905646612/1173253913303056524 channel and resubmit " +
+				"https://discord.com/channels/1172535371905646612/1176891514325057566 channel and resubmit " +
 				"the screenshot with the names."
 			s.sendPrivateMessage(ctx, session, message.Author.ID, msg)
 			return
@@ -395,15 +395,94 @@ func (s *Service) updateMemberList(ctx context.Context, session *discordgo.Sessi
 // kickOffCron will instantiate the HallOfFameRequestInfos and kick off the cron job
 func (s *Service) kickOffCron(ctx context.Context, session *discordgo.Session) {
 	s.log.Info("Initializing Hall Of Fame Cron Job...")
-	slayerBosses := util.HallOfFameRequestInfo{Name: "Slayer Bosses", Bosses: map[string]string{"sire": "https://i.imgur.com/GhbmqEB.png", "hydra": "https://i.imgur.com/25GU0Ph.png", "cerberus": "https://i.imgur.com/UoxGuQi.png", "grotesqueguardians": "https://i.imgur.com/M7ylVBZ.png", "kraken": "https://i.imgur.com/Q6EbJb1.png", "smokedevil": "https://i.imgur.com/2AYntQ5.png"}, DiscChan: s.config.DiscSlayerBossesChan}
-	gwd := util.HallOfFameRequestInfo{Name: "GWD Bosses", Bosses: map[string]string{"commanderzilyana": "https://i.imgur.com/aNm4Ydd.png", "kreearra": "https://i.imgur.com/lX8SfgN.png", "kriltsutsaroth": "https://i.imgur.com/hh8cMvp.png", "nex": "https://i.imgur.com/pqiVQBC.png", "generalgraardor": "https://i.imgur.com/hljv9ZW.png"}, DiscChan: s.config.DiscGwdChan}
-	wildy := util.HallOfFameRequestInfo{Name: "Wildy Bosses", Bosses: map[string]string{"artio": "https://i.imgur.com/bw6zLpU.png", "callisto": "https://i.imgur.com/bw6zLpU.png", "calvarion": "https://i.imgur.com/v3KX75y.png", "vetion": "https://i.imgur.com/v3KX75y.png", "spindel": "https://i.imgur.com/4zknWSX.png", "venenatis": "https://i.imgur.com/4zknWSX.png", "chaoselemental": "https://i.imgur.com/YAvIpbm.png", "chaosfanatic": "https://i.imgur.com/azV2sD1.png", "crazyarchaeologist": "https://i.imgur.com/23LXv53.png", "scorpia": "https://i.imgur.com/9aaguxB.png"}, DiscChan: s.config.DiscWildyChan}
-	other := util.HallOfFameRequestInfo{Name: "Other Bosses", Bosses: map[string]string{"corporealbeast": "https://i.imgur.com/zEDN4Pf.png", "prime": "https://i.imgur.com/kJBtqHB.png", "rexbro": "https://i.imgur.com/PvlGWFZ.png", "supreme": "https://i.imgur.com/BOgkBuD.png", "gauntlet": "https://i.imgur.com/weiHWnz.png", "gauntlethard": "https://i.imgur.com/xzW4TGR.png", "giantmole": "https://i.imgur.com/coKk2pr.gif", "jad": "https://i.imgur.com/H9aO1Ot.png", "zuk": "https://i.imgur.com/mKstHza.png", "kq": "https://i.imgur.com/ZuaFoBR.png", "kbd": "https://i.imgur.com/r5vkw1s.png", "sarachnis": "https://i.imgur.com/98THH8O.png", "skotizo": "https://i.imgur.com/YUcQu4d.png", "muspah": "https://i.imgur.com/sW2cLQ2.png", "vorkath": "https://i.imgur.com/6biF3P2.png", "phosanis": "https://i.imgur.com/4aDkxms.png", "nightmare": "https://i.imgur.com/4aDkxms.png", "zulrah": "https://i.imgur.com/tPllWNF.png"}, DiscChan: s.config.DiscOtherChan}
-	misc := util.HallOfFameRequestInfo{Name: "Miscellaneous Bosses", Bosses: map[string]string{"barrows": "https://i.imgur.com/ajoK20v.png", "hespori": "https://i.imgur.com/b0qYGHS.png", "mimic": "https://i.imgur.com/jC7yTC3.png", "obor": "https://i.imgur.com/dwLvSbR.png", "bryophyta": "https://i.imgur.com/3cdyp4X.png", "derangedarchaeologist": "https://i.imgur.com/cnHpevF.png", "wintertodt": "https://i.imgur.com/6oFef2Y.png", "zalcano": "https://i.imgur.com/edN11Nf.png", "tempoross": "https://i.imgur.com/fRj3JA4.png", "rift": "https://i.imgur.com/MOiyXeH.png"}, DiscChan: s.config.DiscMiscChan}
-	dt2 := util.HallOfFameRequestInfo{Name: "Desert Treasure 2 Bosses", Bosses: map[string]string{"duke": "https://i.imgur.com/RYPmrXy.png", "leviathan": "https://i.imgur.com/mEQRq5c.png", "whisperer": "https://i.imgur.com/cFGWb6Y.png", "vardorvis": "https://i.imgur.com/WMPuShZ.png"}, DiscChan: s.config.DiscDT2Chan}
-	raids := util.HallOfFameRequestInfo{Name: "Raids Bosses", Bosses: map[string]string{"cox": "https://i.imgur.com/gxdWXtH.png", "coxcm": "https://i.imgur.com/gxdWXtH.png", "tob": "https://i.imgur.com/pW1sJAQ.png", "tobcm": "https://i.imgur.com/pW1sJAQ.png", "toa": "https://i.imgur.com/2GvzqGw.png", "toae": "https://i.imgur.com/2GvzqGw.png"}, DiscChan: s.config.DiscRaidsChan}
-	pvp := util.HallOfFameRequestInfo{Name: "PVP", Bosses: map[string]string{"bhh": "https://i.imgur.com/zSQhlWk.png", "bhr": "https://i.imgur.com/Y3Sga7t.png", "lms": "https://i.imgur.com/rzW7ZXx.png", "arena": "https://i.imgur.com/uNP6Ggu.png", "zeal": "https://i.imgur.com/Ws7HvKL.png"}, DiscChan: s.config.DiscPVPChan}
-	clues := util.HallOfFameRequestInfo{Name: "Clues", Bosses: map[string]string{"clueall": "https://i.imgur.com/wX3Ei7U.png", "cluebeginner": "https://i.imgur.com/fUmzJkW.png", "clueeasy": "https://i.imgur.com/phnSCHj.png", "cluemedium": "https://i.imgur.com/t5iH8Xa.png", "cluehard": "https://i.imgur.com/a0xwcGI.png", "clueelite": "https://i.imgur.com/ibNRk3G.png", "cluemaster": "https://i.imgur.com/12rCLVv.png"}, DiscChan: s.config.DiscCluesChan}
+	slayerBosses := util.HallOfFameRequestInfo{Name: "Slayer Bosses", DiscChan: s.config.DiscSlayerBossesChan, Bosses: []util.BossInfo{
+		{BossName: "sire", ImageLink: "https://i.imgur.com/GhbmqEB.png"},
+		{BossName: "hydra", ImageLink: "https://i.imgur.com/25GU0Ph.png"},
+		{BossName: "cerberus", ImageLink: "https://i.imgur.com/UoxGuQi.png"},
+		{BossName: "grotesqueguardians", ImageLink: "https://i.imgur.com/M7ylVBZ.png"},
+		{BossName: "kraken", ImageLink: "https://i.imgur.com/Q6EbJb1.png"},
+		{BossName: "smokedevil", ImageLink: "https://i.imgur.com/2AYntQ5.png"},
+	}}
+	gwd := util.HallOfFameRequestInfo{Name: "GWD Bosses", DiscChan: s.config.DiscGwdChan, Bosses: []util.BossInfo{
+		{BossName: "commanderzilyana", ImageLink: "https://i.imgur.com/aNm4Ydd.png"},
+		{BossName: "kreearra", ImageLink: "https://i.imgur.com/lX8SfgN.png"},
+		{BossName: "kriltsutsaroth", ImageLink: "https://i.imgur.com/hh8cMvp.png"},
+		{BossName: "nex", ImageLink: "https://i.imgur.com/pqiVQBC.png"},
+		{BossName: "generalgraardor", ImageLink: "https://i.imgur.com/hljv9ZW.png"},
+	}}
+	wildy := util.HallOfFameRequestInfo{Name: "Wildy Bosses", DiscChan: s.config.DiscWildyChan, Bosses: []util.BossInfo{
+		{BossName: "artio", ImageLink: "https://i.imgur.com/bw6zLpU.png"},
+		{BossName: "callisto", ImageLink: "https://i.imgur.com/bw6zLpU.png"},
+		{BossName: "calvarion", ImageLink: "https://i.imgur.com/v3KX75y.png"},
+		{BossName: "vetion", ImageLink: "https://i.imgur.com/v3KX75y.png"},
+		{BossName: "spindel", ImageLink: "https://i.imgur.com/4zknWSX.png"},
+		{BossName: "venenatis", ImageLink: "https://i.imgur.com/4zknWSX.png"},
+		{BossName: "chaoselemental", ImageLink: "https://i.imgur.com/YAvIpbm.png"},
+		{BossName: "chaosfanatic", ImageLink: "https://i.imgur.com/azV2sD1.png"},
+		{BossName: "crazyarchaeologist", ImageLink: "https://i.imgur.com/23LXv53.png"},
+		{BossName: "scorpia", ImageLink: "https://i.imgur.com/9aaguxB.png"},
+	}}
+	other := util.HallOfFameRequestInfo{Name: "Other Bosses", DiscChan: s.config.DiscOtherChan, Bosses: []util.BossInfo{
+		{BossName: "corporealbeast", ImageLink: "https://i.imgur.com/zEDN4Pf.png"},
+		{BossName: "prime", ImageLink: "https://i.imgur.com/kJBtqHB.png"},
+		{BossName: "rexbro", ImageLink: "https://i.imgur.com/PvlGWFZ.png"},
+		{BossName: "supreme", ImageLink: "https://i.imgur.com/BOgkBuD.png"},
+		{BossName: "gauntlet", ImageLink: "https://i.imgur.com/weiHWnz.png"},
+		{BossName: "gauntlethard", ImageLink: "https://i.imgur.com/xzW4TGR.png"},
+		{BossName: "giantmole", ImageLink: "https://i.imgur.com/coKk2pr.png"},
+		{BossName: "jad", ImageLink: "https://i.imgur.com/H9aO1Ot.png"},
+		{BossName: "zuk", ImageLink: "https://i.imgur.com/mKstHza.png"},
+		{BossName: "kq", ImageLink: "https://i.imgur.com/ZuaFoBR.png"},
+		{BossName: "kbd", ImageLink: "https://i.imgur.com/r5vkw1s.png"},
+		{BossName: "sarachnis", ImageLink: "https://i.imgur.com/98THH8O.png"},
+		{BossName: "skotizo", ImageLink: "https://i.imgur.com/YUcQu4d.png"},
+		{BossName: "muspah", ImageLink: "https://i.imgur.com/sW2cLQ2.png"},
+		{BossName: "vorkath", ImageLink: "https://i.imgur.com/6biF3P2.png"},
+		{BossName: "nightmare", ImageLink: "https://i.imgur.com/4aDkxms.png"},
+		{BossName: "phosanis", ImageLink: "https://i.imgur.com/4aDkxms.png"},
+		{BossName: "zulrah", ImageLink: "https://i.imgur.com/tPllWNF.png"},
+	}}
+	misc := util.HallOfFameRequestInfo{Name: "Miscellaneous Bosses", DiscChan: s.config.DiscMiscChan, Bosses: []util.BossInfo{
+		{BossName: "barrows", ImageLink: "https://i.imgur.com/ajoK20v.png"},
+		{BossName: "hespori", ImageLink: "https://i.imgur.com/b0qYGHS.png"},
+		{BossName: "mimic", ImageLink: "https://i.imgur.com/jC7yTC3.png"},
+		{BossName: "obor", ImageLink: "https://i.imgur.com/dwLvSbR.png"},
+		{BossName: "bryophyta", ImageLink: "https://i.imgur.com/3cdyp4X.png"},
+		{BossName: "derangedarchaeologist", ImageLink: "https://i.imgur.com/cnHpevF.png"},
+		{BossName: "wintertodt", ImageLink: "https://i.imgur.com/6oFef2Y.png"},
+		{BossName: "zalcano", ImageLink: "https://i.imgur.com/edN11Nf.png"},
+		{BossName: "rift", ImageLink: "https://i.imgur.com/MOiyXeH.png"},
+	}}
+	dt2 := util.HallOfFameRequestInfo{Name: "Desert Treasure 2 Bosses", DiscChan: s.config.DiscDT2Chan, Bosses: []util.BossInfo{
+		{BossName: "duke", ImageLink: "https://i.imgur.com/RYPmrXy.png"},
+		{BossName: "leviathan", ImageLink: "https://i.imgur.com/mEQRq5c.png"},
+		{BossName: "whisperer", ImageLink: "https://i.imgur.com/cFGWb6Y.png"},
+		{BossName: "vardorvis", ImageLink: "https://i.imgur.com/WMPuShZ.png"},
+	}}
+	raids := util.HallOfFameRequestInfo{Name: "Raids Bosses", DiscChan: s.config.DiscRaidsChan, Bosses: []util.BossInfo{
+		{BossName: "cox", ImageLink: "https://i.imgur.com/gxdWXtH.png"},
+		{BossName: "coxcm", ImageLink: "https://i.imgur.com/gxdWXtH.png"},
+		{BossName: "tob", ImageLink: "https://i.imgur.com/pW1sJAQ.png"},
+		{BossName: "tobcm", ImageLink: "https://i.imgur.com/pW1sJAQ.png"},
+		{BossName: "toa", ImageLink: "https://i.imgur.com/2GvzqGw.png"},
+		{BossName: "toae", ImageLink: "https://i.imgur.com/2GvzqGw.png"},
+	}}
+	pvp := util.HallOfFameRequestInfo{Name: "PVP", DiscChan: s.config.DiscPVPChan, Bosses: []util.BossInfo{
+		{BossName: "bhh", ImageLink: "https://i.imgur.com/zSQhlWk.png"},
+		{BossName: "bhr", ImageLink: "https://i.imgur.com/Y3Sga7t.png"},
+		{BossName: "lms", ImageLink: "https://i.imgur.com/rzW7ZXx.png"},
+		{BossName: "arena", ImageLink: "https://i.imgur.com/uNP6Ggu.png"},
+		{BossName: "zeal", ImageLink: "https://i.imgur.com/Ws7HvKL.png"},
+	}}
+	clues := util.HallOfFameRequestInfo{Name: "Clues", DiscChan: s.config.DiscCluesChan, Bosses: []util.BossInfo{
+		{BossName: "cluebeginner", ImageLink: "https://i.imgur.com/fUmzJkW.png"},
+		{BossName: "clueeasy", ImageLink: "https://i.imgur.com/phnSCHj.png"},
+		{BossName: "cluemedium", ImageLink: "https://i.imgur.com/t5iH8Xa.png"},
+		{BossName: "cluehard", ImageLink: "https://i.imgur.com/a0xwcGI.png"},
+		{BossName: "clueelite", ImageLink: "https://i.imgur.com/ibNRk3G.png"},
+		{BossName: "cluemaster", ImageLink: "https://i.imgur.com/12rCLVv.png"},
+		{BossName: "clueall", ImageLink: "https://i.imgur.com/wX3Ei7U.png"},
+	}}
 
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
