@@ -24,7 +24,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
 			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return 
+			return
 		}
 		var messageIDs []string
 		for _, message := range messages {
@@ -33,7 +33,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 		err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 		if err != nil {
 			s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name)
-			return 
+			return
 		}
 
 		// Now add all the bosses
@@ -68,7 +68,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
 			if err != nil {
 				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
-				return 
+				return
 			}
 		}
 	}
