@@ -81,8 +81,6 @@ func (g GoogleSheetsClient) UpdateCpSheet(ctx context.Context, submissions map[s
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
 	// sheets without adding additional logic
-	err := sheet.DeleteRows(0, len(sheet.Rows))
-	checkError(err)
 
 	// Update the Google sheets information with the in memory submissions map
 	row := 0
@@ -93,7 +91,7 @@ func (g GoogleSheetsClient) UpdateCpSheet(ctx context.Context, submissions map[s
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err = sheet.Synchronize()
+	err := sheet.Synchronize()
 	checkError(err)
 }
 

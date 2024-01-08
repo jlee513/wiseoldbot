@@ -129,7 +129,8 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 
 	// Send the Discord Embed message for instructions on how the rankings work
 	var msg string
-	msg = msg + "In order to get onto this leaderboard, you must have a podium finish of one of the HOF Bosses.\n\n"
+	msg = msg + "In order to get onto this leaderboard, you must have a podium finish of one of the HOF Bosses. Also, " +
+		"the HOF uses TempleOSRS to get kcs - please turn on the XP Tracker plugin on Runelite and check the TempleOSRS option.\n\n"
 	msg = msg + "3 points for :first_place:\n2 points for :second_place:\n1 points for :third_place:"
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
 		SetTitle("How To Get Onto The Collection Log HOF").

@@ -96,6 +96,7 @@ func (s *Service) StartDiscordIRC() {
 	}(session)
 
 	// Kick off gocron for updating the Hall Of fame
+	s.updateLeaderboard(ctx, session)
 	s.kickOffCron(ctx, session)
 	s.log.Info("OSRS Disc Bot is now online!")
 
@@ -135,9 +136,41 @@ func (s *Service) listenForMessage(session *discordgo.Session, message *discordg
 		s.listenForCPSubmission(ctx, session, message)
 	case s.config.DiscSignUpChan:
 		s.updateMemberList(ctx, session, message)
+	case s.config.DiscGuideUpdateChan:
+		s.updateGuide(ctx, session, message)
 	default:
 		// Return if the message was not posted in one of the channels we are handling
 		return
+	}
+}
+
+/*
+updateGuide will take in a name of a guide and update that guide.
+*/
+func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate) {
+	logger := flume.FromContext(ctx)
+
+	// Defer the deletion of the message
+	defer func(messageId string) {
+		// Once everything is finished, delete the message from the submission channel
+		err := session.ChannelMessageDelete(s.config.DiscGuideUpdateChan, messageId)
+		if err != nil {
+			logger.Error("Failed to delete channel message: " + err.Error())
+			return
+		}
+	}(message.ID)
+
+	// Remove leading and trailing whitespaces
+	msg := strings.TrimSpace(message.Content)
+	logger.Debug("Updating guide: " + msg)
+
+	switch msg {
+	case "trio-cm":
+		s.updateTrioCMGuide(ctx, session)
+		break
+	case "tob":
+		s.updateTobGuide(ctx, session)
+		break
 	}
 }
 
@@ -479,6 +512,10 @@ func (s *Service) kickOffCron(ctx context.Context, session *discordgo.Session) {
 		{BossName: "cluemaster", ImageLink: "https://i.imgur.com/12rCLVv.png"},
 		{BossName: "clueall", ImageLink: "https://i.imgur.com/wX3Ei7U.png"},
 	}}
+
+	//s.updateHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
+	//s.updateColLog(ctx, session)
+	//s.updateLeagues(ctx, session)
 
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {

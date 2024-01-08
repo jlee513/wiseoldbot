@@ -1,11 +1,39 @@
 package util
 
 type Config struct {
-	DiscBotToken           string `mapstructure:"DISCORD_BOT_TOKEN"`
-	DiscSubChan            string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
-	DiscSignUpChan         string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
-	DiscLeaderboardChan    string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
-	DiscDirectoryChan      string `mapstructure:"DISCORD_DIRECTORY_CHANNEL"`
+	LogDebug        bool   `mapstructure:"LOG_DEBUG"`
+	CronKickoffTime string `mapstructure:"CRON_KICKOFF_TIME"`
+
+	DiscBotToken        string `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscSubChan         string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
+	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
+	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+
+	// Third Party Information
+	TempleGroupId     string `mapstructure:"TEMPLE_GROUP_ID"`
+	TempleGroupKey    string `mapstructure:"TEMPLE_GROUP_KEY"`
+	SheetsCp          string `mapstructure:"SHEETS_CP"`
+	SheetsCpSC        string `mapstructure:"SHEETS_CP_SC"`
+	SheetsSpeedSC     string `mapstructure:"SHEETS_SPEED_SC"`
+	ImgurClientId     string `mapstructure:"IMGUR_CLIENT_ID"`
+	ImgurClientSecret string `mapstructure:"IMGUR_CLIENT_SECRET"`
+	ImgurRefreshToken string `mapstructure:"IMGUR_REFRESH_TOKEN"`
+
+	//Guide Update
+	DiscGuideUpdateChan string `mapstructure:"DISCORD_GUIDE_UPDATE_CHANNEL"`
+
+	// CM
+	DiscTrioCMChinGuideChan  string `mapstructure:"DISCORD_TRIO_CM_CHIN_GUIDE_CHANNEL"`
+	DiscTrioCMPrepGuideChan  string `mapstructure:"DISCORD_TRIO_CM_PREP_GUIDE_CHANNEL"`
+	DiscTrioCMSurgeGuideChan string `mapstructure:"DISCORD_TRIO_CM_SURGE_GUIDE_CHANNEL"`
+	DiscTrioCMUsefulInfoChan string `mapstructure:"DISCORD_TRIO_CM_USEFUL_INFO_CHANNEL"`
+
+	// TOB
+	DiscTobMageGuideChan  string `mapstructure:"DISCORD_TOB_MAGE_GUIDE_CHANNEL"`
+	DiscTobRangeGuideChan string `mapstructure:"DISCORD_TOB_RANGE_GUIDE_CHANNEL"`
+	DiscTobMeleeGuideChan string `mapstructure:"DISCORD_TOB_MELEE_GUIDE_CHANNEL"`
+
+	// HOF
 	DiscSlayerBossesChan   string `mapstructure:"DISCORD_SLAYER_BOSSES_CHANNEL"`
 	DiscGwdChan            string `mapstructure:"DISCORD_GWD_CHANNEL"`
 	DiscWildyChan          string `mapstructure:"DISCORD_WILDERNESS_CHANNEL"`
@@ -18,16 +46,6 @@ type Config struct {
 	DiscColChan            string `mapstructure:"DISCORD_COL_CHANNEL"`
 	DiscLeaguesChan        string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	DiscHOFLeaderboardChan string `mapstructure:"DISCORD_HOF_LEADERBOARD_CHANNEL"`
-	TempleGroupId          string `mapstructure:"TEMPLE_GROUP_ID"`
-	TempleGroupKey         string `mapstructure:"TEMPLE_GROUP_KEY"`
-	SheetsCp               string `mapstructure:"SHEETS_CP"`
-	SheetsCpSC             string `mapstructure:"SHEETS_CP_SC"`
-	SheetsSpeedSC          string `mapstructure:"SHEETS_SPEED_SC"`
-	ImgurClientId          string `mapstructure:"IMGUR_CLIENT_ID"`
-	ImgurClientSecret      string `mapstructure:"IMGUR_CLIENT_SECRET"`
-	ImgurRefreshToken      string `mapstructure:"IMGUR_REFRESH_TOKEN"`
-	LogDebug               bool   `mapstructure:"LOG_DEBUG"`
-	CronKickoffTime        string `mapstructure:"CRON_KICKOFF_TIME"`
 }
 
 type PodiumLeaguePoints struct {
