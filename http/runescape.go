@@ -2,14 +2,14 @@ package http
 
 import (
 	"context"
-	"fmt"
-	"github.com/gemalto/flume"
 	"io"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gemalto/flume"
 )
 
 type RunescapeClient struct {
@@ -31,7 +31,7 @@ func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, submission
 	for player, _ := range submissions {
 		resp, err := r.client.Get(r.leaguesUrl + player)
 		if err != nil {
-			logger.Error("Failed to get Runescape leagues info from: " + player)
+			logger.Error("Failed to get Runescape leagues info for: " + player)
 			return nil, nil
 		}
 		defer resp.Body.Close()
@@ -53,7 +53,7 @@ func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, submission
 				}
 			}
 		} else if resp.StatusCode == http.StatusNotFound {
-			fmt.Println("Missing user for leagues: " + player)
+			logger.Error("Missing user for leagues: " + player)
 			continue
 		}
 

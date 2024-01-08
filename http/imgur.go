@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"osrs-disc-bot/util"
 	"time"
+
+	"github.com/gemalto/flume"
 )
 
 type ImgurClient struct {
@@ -28,6 +30,8 @@ func NewImgurClient() *ImgurClient {
 
 // Upload will upload the image provided into imgur and return back the imgur url
 func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Reader) string {
+	logger := flume.FromContext(ctx)
+
 	var buf = new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
 
@@ -45,6 +49,7 @@ func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Re
 	// Read the whole body
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
+		logger.Error("Error reading body: ", err)
 		panic(err)
 	}
 
@@ -62,6 +67,7 @@ GetNewAccessToken will take the imgur refresh token along with client informatio
 the access token required to make submissions to the imgur API
 */
 func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string, ClientID string, ClientSecret string) string {
+	logger := flume.FromContext(ctx)
 	rawBody, err := json.Marshal(
 		util.GenerateAccessTokenRequest{
 			RefreshToken: RefreshToken,
@@ -69,20 +75,24 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 			ClientSecret: ClientSecret,
 			GrantType:    "refresh_token",
 		})
+	logger.Info("Initiating retrieval of new imgur access token.")
 
 	req, err := http.NewRequest(http.MethodPost, i.refreshURL, bytes.NewBuffer(rawBody))
 	if err != nil {
+		logger.Error("Error while creating access token request: ", err.Error())
 		panic(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := i.client.Do(req)
 	if err != nil {
+		logger.Error("Error while executing access token API call: ", err.Error())
 		panic(err)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		logger.Error("Error while reading access token response: ", err.Error())
 		panic(err)
 	}
 	defer resp.Body.Close()

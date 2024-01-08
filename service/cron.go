@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
+	"osrs-disc-bot/util"
+
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
-	"osrs-disc-bot/util"
 	"sort"
 	"strconv"
 )
@@ -18,7 +19,7 @@ func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, all
 	hofLeaderboard := make(map[string]int)
 
 	for _, requestInfo := range allRequestInfo {
-		s.log.Debug("Running update HOF for Boss: " + requestInfo.Name)
+		s.log.Info("Running HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
 		if err != nil {
@@ -146,7 +147,9 @@ updateColLog will use all the users within the in memory submission map to creat
 from collectionlog.net and their rankings. It will create an embed with the top 10 placements in
 discord.
 */
-func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
+	s.log.Info("Running collection log hiscores update...")
+
 	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.submissions)
 
 	// Create the leaderboard message that will be sent
@@ -192,7 +195,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "", "")
 	if err != nil {
-		return
+		s.log.Error("Failed to retrieve last 10 messages" + err.Error())
+		return err
 	}
 	var messageIDs []string
 	for _, message := range messages {
@@ -200,7 +204,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
 	if err != nil {
-		return
+		s.log.Error("Failed to bulk delete the collection log" + err.Error())
+		return err
 	}
 
 	// Send the Discord Embed message for collection log
@@ -209,7 +214,8 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		return
+		s.log.Error("Failed to send discord emded message" + err.Error())
+		return err
 	}
 
 	// Send the Discord Embed message for instructions on how to get on the collection log hall of fame
@@ -224,15 +230,21 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(msg).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		return
+		s.log.Error("Failed to send discord emded message" + err.Error())
+		return err
 	}
+
+	s.log.Info("Collection log hiscores update successful.")
+	return nil
 }
 
 func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {
+	s.log.Info("Running leagues hiscores update.")
+
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "", "")
 	if err != nil {
-		s.log.Error("Failed to get all messages for deletion from the leagues podium channel")
+		s.log.Error("Failed to get all messages for deletion from the leagues podium channel.")
 		return
 	}
 	var messageIDs []string
@@ -241,7 +253,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel")
+		s.log.Error("Failed to delete all messages from the leagues podium channel.")
 		return
 	}
 
@@ -313,7 +325,9 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send message for leagues podium")
+		s.log.Error("Failed to send message for leagues podium.")
 		return
 	}
+
+	s.log.Info("Leagues hiscores update successful.")
 }
