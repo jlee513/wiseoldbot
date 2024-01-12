@@ -10,17 +10,20 @@ import (
 
 type imgur interface {
 	Upload(ctx context.Context, AccessToken string, image io.Reader) string
-	GetNewAccessToken(ctx context.Context, RefreshToken string, ClientID string, ClientSecret string) string
+	GetNewAccessToken(ctx context.Context, RefreshToken string, ClientID string, ClientSecret string) (string, error)
 }
 
 type collectionLog interface {
-	RetrieveCollectionLogAndOrder(ctx context.Context, submissions map[string]int) (map[string]int, []string)
+	RetrieveCollectionLogAndOrder(ctx context.Context, cp map[string]int) (map[string]int, []string)
 }
 
 type sheets interface {
-	InitializeSubmissionsFromSheet(ctx context.Context, submissions map[string]int)
-	UpdateCpSheet(ctx context.Context, submissions map[string]int)
+	InitializeCpFromSheet(ctx context.Context, cp map[string]int)
+	InitializeSpeedsFromSheet(ctx context.Context, speed map[string]util.SpeedInfo)
+	UpdateCpSheet(ctx context.Context, cp map[string]int)
 	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string)
+	UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo)
+	UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo)
 }
 
 type temple interface {
@@ -30,5 +33,5 @@ type temple interface {
 }
 
 type runescape interface {
-	GetLeaguesPodiumFromRS(ctx context.Context, submissions map[string]int) (map[string]int, []string)
+	GetLeaguesPodiumFromRS(ctx context.Context, cp map[string]int) (map[string]int, []string)
 }

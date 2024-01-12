@@ -19,6 +19,7 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 		"# Mage Duo",
 		"https://i.imgur.com/EZmfQZD.png",
 		"- The Virtus Robe Bottoms offer the same max hit when using trident on the nylos while also allowing a max hit increase on your barrages\n- Make sure to tbow in mage top/bottom & torm for better range bonus\n- Spellbook swap using the magic cape to arceuus after nylo (can drop after)\n- Dinny B spec during nylo on the south doubles wave 22 to ensure maximum usage\n- Ring Usages:\n - Maiden: Ultor\n - Bloat: Ultor\n - Nylo: Ultor\n - Sotetseg: Both you and your ranger will spec with Ultor on wait until you hit 60% spec. You will then camp lb until 80%. For the rest of the fight: 0-1 hammer Bellator, otherwise Ultor\n - Xarpus: Ultor\n - Verzik: P1 Lightbearer, P2 Bellator, P3 Ultor",
+		"# BACK TO THE TOP: https://discord.com/channels/1172535371905646612/1184610126670336080/1184610126670336080",
 	}
 
 	rangeSetup := []string{
@@ -31,6 +32,7 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 		"# Range Setup Duo",
 		"https://i.imgur.com/PdbfjnO.png",
 		"Runes: Lava, Blood, Cosmic, Death\nSpellbook: Lunars\n\n- The runes allow for veng/sbs thralls\n- There is no pot share in this either, so bring a divine ranging\n- You are the only BGS - here is the priority:\n - Maiden: BGS after two hammers hit - if your mager misses 1, you need to backup\n - Nylo: BGS the boss down to 0\n - Xarpus: Same as maiden\n- Share leftover divine sbc doses to mager after Sotetseg\n- Ring Usages:\n - Maiden: Ultor\n - Bloat: Ultor\n - Nylo: Ultor\n - Sotetseg: Both you and your mager will spec with Ultor on wait until you hit 60% spec. You will then camp lb until 80%. For the rest of the fight: 0-1 hammer Bellator, otherwise Ultor\n - Xarpus: Ultor\n - Verzik: P1 Lightbearer, P2 Bellator, P3 Ultor",
+		"# BACK TO THE TOP: https://discord.com/channels/1172535371905646612/1184622959466389514/1184622959466389514",
 	}
 
 	meleeSetup := []string{
@@ -40,11 +42,12 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 		"# Melee Trio Setup",
 		"https://i.imgur.com/3jgoepr.png",
 		"Runes: Law, Cosmic, Astral, Death\nSpellbook: Lunars\n\n- The runes allow for veng/pot share/sbs thralls/sbs death charge\n- Pot share ranging potion at the end of nylo waves\n- Ring Usages:\n - Maiden: Ultor\n - Bloat: Ultor\n - Nylo: Ultor\n - Sotetseg: 0-1 hammer Bellator (can use lightbearer for a phase if needed to backup), otherwise Ultor\n - Xarpus: Ultor\n - Verzik: P1 Lightbearer, P2 Bellator, P3 Ultor",
+		"# BACK TO THE TOP: https://discord.com/channels/1172535371905646612/1184829923479797820/1184829923479797820",
 	}
 
 	s.deleteAllMessages(session, "tob mage", s.config.DiscTobMageGuideChan, "1184610126670336080")
 	s.deleteAllMessages(session, "tob range", s.config.DiscTobRangeGuideChan, "1184622959466389514")
-	s.deleteAllMessages(session, "tob melee", s.config.DiscTobRangeGuideChan, "1184829923479797820")
+	s.deleteAllMessages(session, "tob melee", s.config.DiscTobMeleeGuideChan, "1184829923479797820")
 
 	s.log.Debug("Updating mage tob guide...")
 	for _, line := range mageSetup {
@@ -72,7 +75,6 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 			return
 		}
 	}
-
 }
 
 func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Session) {
@@ -238,8 +240,6 @@ func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Sess
 			return
 		}
 	}
-
-	s.log.Debug("Finished updating trio cm guide!")
 }
 
 func (s *Service) deleteAllMessages(session *discordgo.Session, guide string, channel string, initialImage string) {
@@ -255,7 +255,15 @@ func (s *Service) deleteAllMessages(session *discordgo.Session, guide string, ch
 	}
 	err = session.ChannelMessagesBulkDelete(channel, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to delete all messages for deletion from the " + guide + " channel")
-		return
+		s.log.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
+		for _, message := range messageIDs {
+			err = session.ChannelMessageDelete(channel, message)
+			if err != nil {
+				s.log.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
+				return
+			}
+		}
 	}
+
+	return
 }

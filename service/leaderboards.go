@@ -2,79 +2,13 @@ package service
 
 import (
 	"context"
-	"osrs-disc-bot/util"
-
+	"fmt"
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gemalto/flume"
 	"sort"
 	"strconv"
 )
-
-/*
-updateHOF will iterate over all the HallOfFameRequestInfos, grab the podium from temple for each
-of the bosses, sort them, and make the discord call to create the emded with the boss name, image,
-and podium finish with [kc]
-*/
-func (s *Service) updateHOF(ctx context.Context, session *discordgo.Session, allRequestInfo ...util.HallOfFameRequestInfo) {
-	hofLeaderboard := make(map[string]int)
-
-	for _, requestInfo := range allRequestInfo {
-		s.log.Info("Running HOF update for Boss: " + requestInfo.Name)
-		// First, delete all the messages within the channel
-		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", "", "")
-		if err != nil {
-			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return
-		}
-		var messageIDs []string
-		for _, message := range messages {
-			messageIDs = append(messageIDs, message.ID)
-		}
-		err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
-		if err != nil {
-			s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name)
-			return
-		}
-
-		// Now add all the bosses
-		for _, bossInfo := range requestInfo.Bosses {
-			podium, rankings := s.temple.GetPodiumFromTemple(ctx, bossInfo.BossName)
-			s.log.Debug("Updating " + podium.Data.BossName)
-
-			// Iterate over the players to get the different places for users to create the placements
-			placements := ""
-			for _, k := range rankings {
-				switch k {
-				case 1:
-					placements = placements + ":first_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 3)
-					break
-				case 2:
-					placements = placements + ":second_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 2)
-					break
-				case 3:
-					placements = placements + ":third_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 1)
-					break
-				}
-				placements = placements + podium.Data.Players[k].Username + " [" + strconv.Itoa(podium.Data.Players[k].Kc) + "]\n"
-			}
-
-			// Send the Discord Embed message for the boss podium finish
-			_, err = session.ChannelMessageSendEmbed(requestInfo.DiscChan, embed.NewEmbed().
-				SetTitle(podium.Data.BossName).
-				SetDescription(placements).
-				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
-			if err != nil {
-				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
-				return
-			}
-		}
-	}
-
-	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
-}
 
 func (s *Service) addToHOFLeaderboard(hofLeaderboard map[string]int, player string, points int) {
 	if _, ok := hofLeaderboard[player]; ok {
@@ -107,22 +41,28 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel")
-		return
+		s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+		for _, message := range messageIDs {
+			err = session.ChannelMessageDelete(s.config.DiscHOFLeaderboardChan, message)
+			if err != nil {
+				s.log.Error("Failed to delete messages one by one from the leagues podium channel")
+				return
+			}
+		}
 	}
 
 	// Iterate over the players to get the different places for users to create the placements
 	// Create the leaderboard message that will be sent
 	placements := ""
 	for placement, player := range keys {
-		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(hofLeaderboard[player]) + "]\n"
+		placements = placements + strconv.Itoa(placement+1) + ". " + player + " [" + strconv.Itoa(hofLeaderboard[player]) + "]\n"
 	}
 
 	// Send the Discord Embed message for the leaderboard
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
-		SetTitle("Ponies HOF Leaderboard").
+		SetTitle("Ponies Hall Of Fame Leaderboard").
 		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
 		s.log.Error("Failed to send message for leagues podium")
 		return
@@ -136,8 +76,53 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
 		SetTitle("How To Get Onto The Collection Log HOF").
 		SetDescription(msg).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
+		return
+	}
+}
+
+// updateCpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
+func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
+	// Update the #cp-leaderboard
+	keys := make([]string, 0, len(s.cp))
+	for key := range s.cp {
+		keys = append(keys, key)
+	}
+
+	// Sort the map based on the values
+	sort.SliceStable(keys, func(i, j int) bool {
+		return s.cp[keys[i]] > s.cp[keys[j]]
+	})
+
+	// Create the leaderboard message that will be sent
+	leaderboard := ""
+	for placement, k := range keys {
+		if s.cp[k] > 0 {
+			leaderboard = leaderboard + strconv.Itoa(placement+1) + ". " + k + ": " + strconv.Itoa(s.cp[k]) + "\n"
+		}
+	}
+
+	// Retrieve the one channel message and delete it in the leaderboard channel
+	messages, err := session.ChannelMessages(s.config.DiscLeaderboardChan, 1, "", "", "")
+	if err != nil {
+		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		return
+	}
+	err = session.ChannelMessageDelete(s.config.DiscLeaderboardChan, messages[0].ID)
+	if err != nil {
+		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		return
+	}
+
+	// Send the Discord Embed message
+	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaderboardChan, embed.NewEmbed().
+		SetTitle("Ponies Clan Points Leaderboard").
+		SetDescription(fmt.Sprintf(leaderboard)).
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
+	if err != nil {
+		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 }
@@ -150,46 +135,12 @@ discord.
 func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
 	s.log.Info("Running collection log hiscores update...")
 
-	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.submissions)
+	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.cp)
 
 	// Create the leaderboard message that will be sent
 	placements := ""
 	for placement, k := range ranking {
-		switch placement {
-		case 0:
-			placements = placements + ":one: "
-			break
-		case 1:
-			placements = placements + ":two: "
-			break
-		case 2:
-			placements = placements + ":three: "
-			break
-		case 3:
-			placements = placements + ":four: "
-			break
-		case 4:
-			placements = placements + ":five: "
-			break
-		case 5:
-			placements = placements + ":six: "
-			break
-		case 6:
-			placements = placements + ":seven: "
-			break
-		case 7:
-			placements = placements + ":eight: "
-			break
-		case 8:
-			placements = placements + ":nine: "
-			break
-		case 9:
-			placements = placements + ":keycap_10: "
-			break
-
-		}
-
-		placements = placements + k + " [" + strconv.Itoa(podium[k]) + "]\n"
+		placements = placements + strconv.Itoa(placement+1) + ". " + k + " [" + strconv.Itoa(podium[k]) + "]\n"
 	}
 
 	// First, delete all the messages within the channel
@@ -204,13 +155,19 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to bulk delete the collection log" + err.Error())
-		return err
+		s.log.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
+		for _, message := range messageIDs {
+			err = session.ChannelMessageDelete(s.config.DiscColChan, message)
+			if err != nil {
+				s.log.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
+				return err
+			}
+		}
 	}
 
 	// Send the Discord Embed message for collection log
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscColChan, embed.NewEmbed().
-		SetTitle("Collection Log Ranking").
+		SetTitle("Collection Log Leaderboard").
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
@@ -253,11 +210,17 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	}
 	err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
 	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel.")
-		return
+		s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+		for _, message := range messageIDs {
+			err = session.ChannelMessageDelete(s.config.DiscLeaguesChan, message)
+			if err != nil {
+				s.log.Error("Failed to delete messages one by one from the leagues podium channel.")
+				return
+			}
+		}
 	}
 
-	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.submissions)
+	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.cp)
 	// Iterate over the players to get the different places for users to create the placements
 	// Create the leaderboard message that will be sent
 	placements := "<:Executioner:1176594739366219806> __**TIER 8**__ <:Executioner:1176594739366219806>\n"
@@ -288,7 +251,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 			placements = placements + "\n__**TIER 1**__\n"
 		}
 
-		placements = placements + strconv.Itoa(placement+1) + ") " + player + " [" + strconv.Itoa(leaguesPodium[player]) + "] "
+		placements = placements + strconv.Itoa(placement+1) + ". " + player + " [" + strconv.Itoa(leaguesPodium[player]) + "] "
 
 		var bronze, iron, steel, mithril, adamant, runeTier, dragon = 2500, 5000, 10000, 18000, 28000, 42000, 56000
 		points := leaguesPodium[player]
@@ -321,9 +284,9 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 
 	// Send the Discord Embed message for the boss podium finish
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaguesChan, embed.NewEmbed().
-		SetTitle("Ponies League Standings").
+		SetTitle("Ponies Trailblazer Reloaded League Standings").
 		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/O4NzB95.png").MessageEmbed)
+		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
 		s.log.Error("Failed to send message for leagues podium.")
 		return

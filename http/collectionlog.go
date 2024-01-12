@@ -25,13 +25,13 @@ func NewCollectionLogClient() *CollectionLogClient {
 
 /*
 RetrieveCollectionLogAndOrder will call the collectionlog.net's api for each of the players in the
-submissions map, sort it based on number of collection logs obtained, and return a map with the player's
+cp map, sort it based on number of collection logs obtained, and return a map with the player's
 name + collection log number along with the rankings
 */
-func (c CollectionLogClient) RetrieveCollectionLogAndOrder(ctx context.Context, submissions map[string]int) (map[string]int, []string) {
+func (c *CollectionLogClient) RetrieveCollectionLogAndOrder(ctx context.Context, cp map[string]int) (map[string]int, []string) {
 	logger := flume.FromContext(ctx)
 	collectionLog := make(map[string]int)
-	for player, _ := range submissions {
+	for player := range cp {
 		// Call the collectionlog api for the player
 		url := "https://api.collectionlog.net/collectionlog/user/" + player
 		resp, err := http.Get(url)
@@ -61,7 +61,6 @@ func (c CollectionLogClient) RetrieveCollectionLogAndOrder(ctx context.Context, 
 			// number of uniques this player has
 			collectionLog[player] = col.CollectionLog.Uniques
 		} else if resp.StatusCode == http.StatusNotFound {
-			logger.Error("Missing user for collection log: " + player)
 			continue
 		}
 	}
