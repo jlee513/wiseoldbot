@@ -514,7 +514,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		// TODO: Find a way to let the user know that their submission has been rejected
 
 		// Delete the screenshot in the page
-		err := session.ChannelMessageDelete(s.config.DiscCpApprovalChan, r.MessageID)
+		err := session.ChannelMessageDelete(s.config.DiscSpeedApprovalChan, r.MessageID)
 		if err != nil {
 			s.log.Error("Failed to delete cp approval message: " + err.Error())
 		}

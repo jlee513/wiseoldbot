@@ -97,6 +97,7 @@ func (s *Service) StartDiscordIRC() {
 	// Create handler for listening for submission messages
 	session.AddHandler(s.submissionApproval)
 	session.AddHandler(s.slashCommands)
+	session.AddHandler(s.listenForAllChannelMessages)
 
 	// Kick off gocron for updating the Hall Of fame
 	s.initCron(ctx, session)
@@ -178,4 +179,20 @@ func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 	}
 	job.SingletonMode()
 	s.scheduler.StartAsync()
+}
+
+func (s *Service) listenForAllChannelMessages(session *discordgo.Session, message *discordgo.MessageCreate) {
+	// Don't handle message if it's created by the discord bot
+	//if message.Author.ID != session.State.User.ID {
+	//	return
+	//}
+
+	// Run certain tasks depending on the channel the message was posted in
+	switch channel := message.ChannelID; channel {
+	case s.config.DiscLootLogChan:
+		s.listenForLootLog(session, message)
+	default:
+		// Return if the message was not posted in one of the channels we are handling
+		return
+	}
 }

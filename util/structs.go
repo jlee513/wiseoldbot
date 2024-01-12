@@ -12,6 +12,7 @@ type Config struct {
 	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
 	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
 
+	// Submission Approval Channels
 	DiscCpApprovalChan    string `mapstructure:"DISCORD_CP_APPROVAL_CHANNEL"`
 	DiscEventApprovalChan string `mapstructure:"DISCORD_EVENT_APPROVAL_CHANNEL"`
 	DiscSpeedApprovalChan string `mapstructure:"DISCORD_SPEED_APPROVAL_CHANNEL"`
@@ -42,6 +43,7 @@ type Config struct {
 	DiscTobMeleeGuideChan string `mapstructure:"DISCORD_TOB_MELEE_GUIDE_CHANNEL"`
 
 	// HOF
+	DiscLootLogChan        string `mapstructure:"DISCORD_LOOT_LOG_CHANNEL"`
 	DiscSlayerBossesChan   string `mapstructure:"DISCORD_SLAYER_BOSSES_CHANNEL"`
 	DiscGwdChan            string `mapstructure:"DISCORD_GWD_CHANNEL"`
 	DiscWildyChan          string `mapstructure:"DISCORD_WILDERNESS_CHANNEL"`
