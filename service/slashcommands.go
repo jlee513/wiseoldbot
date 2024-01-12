@@ -497,6 +497,22 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			s.log.Info(fmt.Sprintf("Old time: %+v", s.speed[bossName].Time.Format("15:04:05.00")))
 			s.log.Info(fmt.Sprintf("New Time: %+v", t.Format("15:04:05.00")))
 			s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl}
+
+			// Update the clan points
+			// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
+			// instead of running a for loop inside a for loop when adding clan points
+			whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
+			whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
+
+			names := strings.Split(whitespaceStrippedMessage, ",")
+			for _, name := range names {
+				s.log.Debug("Adding clan point to: " + name)
+				s.cp[name] += 1
+			}
+
+			// Update the cp leaderboard
+			s.updateCpLeaderboard(ctx, session)
+
 		} else {
 			s.log.Info("KEEP TIME FOR BOSS: " + bossName)
 			s.log.Info(fmt.Sprintf("Current time: %+v", s.speed[bossName].Time.Format("15:04:05.00")))
