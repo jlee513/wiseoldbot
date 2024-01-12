@@ -24,11 +24,11 @@ func NewRunescapeClient() *RunescapeClient {
 	return client
 }
 
-func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, submissions map[string]int) (map[string]int, []string) {
+func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, cp map[string]int) (map[string]int, []string) {
 	logger := flume.FromContext(ctx)
 	leaguePodium := make(map[string]int)
 
-	for player, _ := range submissions {
+	for player, _ := range cp {
 		resp, err := r.client.Get(r.leaguesUrl + player)
 		if err != nil {
 			logger.Error("Failed to get Runescape leagues info for: " + player)
@@ -53,7 +53,6 @@ func (r *RunescapeClient) GetLeaguesPodiumFromRS(ctx context.Context, submission
 				}
 			}
 		} else if resp.StatusCode == http.StatusNotFound {
-			logger.Error("Missing user for leagues: " + player)
 			continue
 		}
 

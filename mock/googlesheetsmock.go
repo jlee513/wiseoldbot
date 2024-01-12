@@ -16,14 +16,18 @@ func NewGoogleSheetsClient() *GoogleSheetsClientMock {
 	return client
 }
 
-func (g *GoogleSheetsClientMock) InitializeSubmissionsFromSheet(ctx context.Context, submissions map[string]int) {
+func (g *GoogleSheetsClientMock) InitializeCpFromSheet(ctx context.Context, cp map[string]int) {
 	return
 }
 
-func (g *GoogleSheetsClientMock) UpdateCpSheet(ctx context.Context, submissions map[string]int) {
+func (g *GoogleSheetsClientMock) UpdateCpSheet(ctx context.Context, cp map[string]int) {
 	return
 }
 
 func (g *GoogleSheetsClientMock) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
+	return
+}
+
+func (g *GoogleSheetsClientMock) UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]string) {
 	return
 }

@@ -1,19 +1,27 @@
 package util
 
+import "time"
+
 type Config struct {
 	LogDebug        bool   `mapstructure:"LOG_DEBUG"`
 	CronKickoffTime string `mapstructure:"CRON_KICKOFF_TIME"`
 
+	DiscGuildId         string `mapstructure:"DISCORD_GUILD_ID"`
 	DiscBotToken        string `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscSubChan         string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
 	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
 	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+
+	DiscCpApprovalChan    string `mapstructure:"DISCORD_CP_APPROVAL_CHANNEL"`
+	DiscEventApprovalChan string `mapstructure:"DISCORD_EVENT_APPROVAL_CHANNEL"`
+	DiscSpeedApprovalChan string `mapstructure:"DISCORD_SPEED_APPROVAL_CHANNEL"`
 
 	// Third Party Information
 	TempleGroupId     string `mapstructure:"TEMPLE_GROUP_ID"`
 	TempleGroupKey    string `mapstructure:"TEMPLE_GROUP_KEY"`
 	SheetsCp          string `mapstructure:"SHEETS_CP"`
 	SheetsCpSC        string `mapstructure:"SHEETS_CP_SC"`
+	SheetsSpeed       string `mapstructure:"SHEETS_SPEED"`
 	SheetsSpeedSC     string `mapstructure:"SHEETS_SPEED_SC"`
 	ImgurClientId     string `mapstructure:"IMGUR_CLIENT_ID"`
 	ImgurClientSecret string `mapstructure:"IMGUR_CLIENT_SECRET"`
@@ -46,6 +54,30 @@ type Config struct {
 	DiscColChan            string `mapstructure:"DISCORD_COL_CHANNEL"`
 	DiscLeaguesChan        string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	DiscHOFLeaderboardChan string `mapstructure:"DISCORD_HOF_LEADERBOARD_CHANNEL"`
+
+	// SPEED
+	DiscSpeedTzhaarChan    string `mapstructure:"DISCORD_SPEED_TZHAAR_CHANNEL"`
+	DiscSpeedSlayerChan    string `mapstructure:"DISCORD_SPEED_SLAYER_CHANNEL"`
+	DiscSpeedNightmareChan string `mapstructure:"DISCORD_SPEED_NIGHTMARE_CHANNEL"`
+	DiscSpeedNexChan       string `mapstructure:"DISCORD_SPEED_NEX_CHANNEL"`
+	DiscSpeedSoloChan      string `mapstructure:"DISCORD_SPEED_SOLO_CHANNEL"`
+	DiscSpeedCOXChan       string `mapstructure:"DISCORD_SPEED_COX_CHANNEL"`
+	DiscSpeedTOBChan       string `mapstructure:"DISCORD_SPEED_TOB_CHANNEL"`
+	DiscSpeedTOAChan       string `mapstructure:"DISCORD_SPEED_TOA_CHANNEL"`
+	DiscSpeedAgilityChan   string `mapstructure:"DISCORD_SPEED_AGILITY_CHANNEL"`
+}
+
+type SpeedInfo struct {
+	PlayersInvolved string    `json:"playersInvolved"`
+	Time            time.Time `json:"time"`
+	URL             string    `json:"url"`
+}
+
+type SpeedScInfo struct {
+	PlayersInvolved string `json:"playersInvolved"`
+	Time            string `json:"time"`
+	BossName        string `json:"bossName"`
+	URL             string `json:"submissionTime"`
 }
 
 type PodiumLeaguePoints struct {
@@ -65,10 +97,18 @@ type Player struct {
 	Kc       int    `json:"xp"`
 }
 
-type HallOfFameRequestInfo struct {
+type HofRequestInfo struct {
 	Name     string
 	Bosses   []BossInfo
 	DiscChan string
+	AfterId  string
+}
+
+type SpeedsRequestInfo struct {
+	Name     string
+	Bosses   []BossInfo
+	DiscChan string
+	AfterId  string
 }
 
 type BossInfo struct {
