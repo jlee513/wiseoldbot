@@ -9,50 +9,58 @@ import (
 )
 
 func (s *Service) listenForLootLog(session *discordgo.Session, message *discordgo.MessageCreate) {
+	// Remove the bolding to get the string manipulation correct
+	msg := strings.Replace(message.Content, "**", "", -1)
+	s.log.Debug("Message received from loot log channel: " + msg)
 	player := ""
 
 	// Will always add a clan point
-	if strings.Contains(message.Content, " just received a new pet!") {
-		player = strings.Split(message.Content, " just received a new pet!")[0]
-		s.log.Info("Loot Log Pet submission for " + player)
+	if strings.Contains(msg, " just received a new pet!") {
+		player = strings.Split(msg, " just received a new pet!")[0]
+		s.log.Debug("Accepted: Loot Log Pet submission for " + player)
 		if _, ok := s.cp[player]; ok {
 			s.cp[player] += 1
 		} else {
+			s.log.Debug("Rejected: Player " + player + " does not exist.")
 			return
 		}
 		s.updateCpLeaderboard(context.Background(), session)
-	} else if strings.Contains(message.Content, " just received a valuable drop:") {
-		index1 := strings.Index(message.Content, "drop:")
-		index2 := strings.Index(message.Content, "!")
+	} else if strings.Contains(msg, " just received a valuable drop:") {
+		index1 := strings.Index(msg, "drop:")
+		index2 := strings.Index(msg, "!")
 
-		item := message.Content[index1+6 : index2]
+		item := msg[index1+6 : index2]
 		if _, ok := util.LootLogClanPoint[item]; ok {
-			player = strings.Split(message.Content, " just received a valuable drop:")[0]
-			s.log.Info("Loot Log Valuable drop submission for " + player + " with item: " + item)
+			player = strings.Split(msg, " just received a valuable drop:")[0]
+			s.log.Debug("Accepted: Loot Log Valuable drop submission for " + player + " with item: " + item)
 			if _, ok := s.cp[player]; ok {
 				s.cp[player] += 1
 			} else {
+				s.log.Debug("Rejected: Player " + player + " does not exist.")
 				return
 			}
 			s.updateCpLeaderboard(context.Background(), session)
 		} else {
+			s.log.Debug("Rejected: Item " + item + " is not on the list.")
 			return
 		}
-	} else if strings.Contains(message.Content, " just received a new collection log item:") {
-		index1 := strings.Index(message.Content, "item:")
-		index2 := strings.Index(message.Content, "!")
+	} else if strings.Contains(msg, " just received a new collection log item:") {
+		index1 := strings.Index(msg, "item:")
+		index2 := strings.Index(msg, "!")
 
-		item := message.Content[index1+6 : index2]
+		item := msg[index1+6 : index2]
 		if _, ok := util.LootLogClanPoint[item]; ok {
-			player = strings.Split(message.Content, " just received a new collection log item:")[0]
-			s.log.Info("Loot Log collection log submission for " + player + " with item: " + item)
+			player = strings.Split(msg, " just received a new collection log item:")[0]
+			s.log.Debug("Accepted: Loot Log collection log submission for " + player + " with item: " + item)
 			if _, ok := s.cp[player]; ok {
 				s.cp[player] += 1
 			} else {
+				s.log.Debug("Rejected: Player " + player + " does not exist.")
 				return
 			}
 			s.updateCpLeaderboard(context.Background(), session)
 		} else {
+			s.log.Debug("Rejected: Item " + item + " is not on the list.")
 			return
 		}
 	} else {
