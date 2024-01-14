@@ -19,6 +19,7 @@ func (s *Service) addToHOFLeaderboard(hofLeaderboard map[string]int, player stri
 }
 
 func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.Session, hofLeaderboard map[string]int) {
+	logger := flume.FromContext(ctx)
 	keys := make([]string, 0, len(hofLeaderboard))
 	for key := range hofLeaderboard {
 		keys = append(keys, key)
@@ -32,7 +33,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscHOFLeaderboardChan, 50, "", "", "")
 	if err != nil {
-		s.log.Error("Failed to get all messages for deletion from the leagues podium channel")
+		logger.Error("Failed to get all messages for deletion from the leagues podium channel")
 		return
 	}
 	var messageIDs []string
@@ -42,11 +43,11 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	if len(messageIDs) > 0 {
 		err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
 		if err != nil {
-			s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+			logger.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
 			for _, message := range messageIDs {
 				err = session.ChannelMessageDelete(s.config.DiscHOFLeaderboardChan, message)
 				if err != nil {
-					s.log.Error("Failed to delete messages one by one from the leagues podium channel")
+					logger.Error("Failed to delete messages one by one from the leagues podium channel")
 					return
 				}
 			}
@@ -66,7 +67,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send message for leagues podium")
+		logger.Error("Failed to send message for leagues podium")
 		return
 	}
 
@@ -135,7 +136,8 @@ from collectionlog.net and their rankings. It will create an embed with the top 
 discord.
 */
 func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
-	s.log.Info("Running collection log hiscores update...")
+	logger := flume.FromContext(ctx)
+	logger.Info("Running collection log hiscores update...")
 
 	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.cp)
 
@@ -148,7 +150,7 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "", "")
 	if err != nil {
-		s.log.Error("Failed to retrieve last 10 messages" + err.Error())
+		logger.Error("Failed to retrieve last 10 messages" + err.Error())
 		return err
 	}
 	var messageIDs []string
@@ -158,11 +160,11 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	if len(messageIDs) > 0 {
 		err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
 		if err != nil {
-			s.log.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
+			logger.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
 			for _, message := range messageIDs {
 				err = session.ChannelMessageDelete(s.config.DiscColChan, message)
 				if err != nil {
-					s.log.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
+					logger.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
 					return err
 				}
 			}
@@ -175,7 +177,7 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send discord emded message" + err.Error())
+		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
 	}
 
@@ -191,21 +193,22 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 		SetDescription(msg).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send discord emded message" + err.Error())
+		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
 	}
 
-	s.log.Info("Collection log hiscores update successful.")
+	logger.Info("Collection log hiscores update successful.")
 	return nil
 }
 
 func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {
-	s.log.Info("Running leagues hiscores update.")
+	logger := flume.FromContext(ctx)
+	logger.Info("Running leagues hiscores update.")
 
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "", "")
 	if err != nil {
-		s.log.Error("Failed to get all messages for deletion from the leagues podium channel.")
+		logger.Error("Failed to get all messages for deletion from the leagues podium channel.")
 		return
 	}
 	var messageIDs []string
@@ -215,11 +218,11 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	if len(messageIDs) > 0 {
 		err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
 		if err != nil {
-			s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+			logger.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
 			for _, message := range messageIDs {
 				err = session.ChannelMessageDelete(s.config.DiscLeaguesChan, message)
 				if err != nil {
-					s.log.Error("Failed to delete messages one by one from the leagues podium channel.")
+					logger.Error("Failed to delete messages one by one from the leagues podium channel.")
 					return
 				}
 			}
@@ -294,9 +297,9 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 		SetDescription(placements).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
-		s.log.Error("Failed to send message for leagues podium.")
+		logger.Error("Failed to send message for leagues podium.")
 		return
 	}
 
-	s.log.Info("Leagues hiscores update successful.")
+	logger.Info("Leagues hiscores update successful.")
 }

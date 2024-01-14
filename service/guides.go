@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gemalto/flume"
 )
 
 func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
 	mageSetup := []string{
 		"# Mage Setup 5s & 4s",
 		"https://i.imgur.com/KtpIQBH.png",
@@ -45,39 +47,40 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 		"# BACK TO THE TOP: https://discord.com/channels/1172535371905646612/1184829923479797820/1184829923479797820",
 	}
 
-	s.deleteAllMessages(session, "tob mage", s.config.DiscTobMageGuideChan, "1184610126670336080")
-	s.deleteAllMessages(session, "tob range", s.config.DiscTobRangeGuideChan, "1184622959466389514")
-	s.deleteAllMessages(session, "tob melee", s.config.DiscTobMeleeGuideChan, "1184829923479797820")
+	s.deleteAllMessages(ctx, session, "tob mage", s.config.DiscTobMageGuideChan, "1184610126670336080")
+	s.deleteAllMessages(ctx, session, "tob range", s.config.DiscTobRangeGuideChan, "1184622959466389514")
+	s.deleteAllMessages(ctx, session, "tob melee", s.config.DiscTobMeleeGuideChan, "1184829923479797820")
 
-	s.log.Debug("Updating mage tob guide...")
+	logger.Debug("Updating mage tob guide...")
 	for _, line := range mageSetup {
 		_, err := session.ChannelMessageSend(s.config.DiscTobMageGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD TOB MAGE CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD TOB MAGE CHANNEL")
 			return
 		}
 	}
 
-	s.log.Debug("Updating range tob guide...")
+	logger.Debug("Updating range tob guide...")
 	for _, line := range rangeSetup {
 		_, err := session.ChannelMessageSend(s.config.DiscTobRangeGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD TOB RANGE CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD TOB RANGE CHANNEL")
 			return
 		}
 	}
 
-	s.log.Debug("Updating melee tob guide...")
+	logger.Debug("Updating melee tob guide...")
 	for _, line := range meleeSetup {
 		_, err := session.ChannelMessageSend(s.config.DiscTobMeleeGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD TOB MELEE CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD TOB MELEE CHANNEL")
 			return
 		}
 	}
 }
 
 func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
 	prepGuide := []string{
 		"# Gear & Overview",
 		"https://i.imgur.com/eLw2Ace.png",
@@ -203,50 +206,51 @@ func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Sess
 		"https://pastebin.com/RqvZqtu8",
 	}
 
-	s.deleteAllMessages(session, "cm prep", s.config.DiscTrioCMPrepGuideChan, "1184590018967249006")
-	s.deleteAllMessages(session, "cm chin", s.config.DiscTrioCMChinGuideChan, "1184590304934891600")
-	s.deleteAllMessages(session, "cm surge", s.config.DiscTrioCMSurgeGuideChan, "1184590344860487791")
-	s.deleteAllMessages(session, "cm useful", s.config.DiscTrioCMUsefulInfoChan, "1183782621457694762")
+	s.deleteAllMessages(ctx, session, "cm prep", s.config.DiscTrioCMPrepGuideChan, "1184590018967249006")
+	s.deleteAllMessages(ctx, session, "cm chin", s.config.DiscTrioCMChinGuideChan, "1184590304934891600")
+	s.deleteAllMessages(ctx, session, "cm surge", s.config.DiscTrioCMSurgeGuideChan, "1184590344860487791")
+	s.deleteAllMessages(ctx, session, "cm useful", s.config.DiscTrioCMUsefulInfoChan, "1183782621457694762")
 
-	s.log.Debug("Updating trio cm prep guide...")
+	logger.Debug("Updating trio cm prep guide...")
 	for _, line := range prepGuide {
 		_, err := session.ChannelMessageSend(s.config.DiscTrioCMPrepGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO PREP CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO PREP CHANNEL")
 			return
 		}
 	}
-	s.log.Debug("Updating trio cm chin guide...")
+	logger.Debug("Updating trio cm chin guide...")
 	for _, line := range chinGuide {
 		_, err := session.ChannelMessageSend(s.config.DiscTrioCMChinGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO CHIN CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO CHIN CHANNEL")
 			return
 		}
 	}
-	s.log.Debug("Updating trio cm surge guide...")
+	logger.Debug("Updating trio cm surge guide...")
 	for _, line := range surgeGuide {
 		_, err := session.ChannelMessageSend(s.config.DiscTrioCMSurgeGuideChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO SURGE CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO SURGE CHANNEL")
 			return
 		}
 	}
-	s.log.Debug("Updating trio cm useful info...")
+	logger.Debug("Updating trio cm useful info...")
 	for _, line := range usefulInfo {
 		_, err := session.ChannelMessageSend(s.config.DiscTrioCMUsefulInfoChan, line)
 		if err != nil {
-			s.log.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO USEFUL INFO CHANNEL")
+			logger.Error("ERROR SENDING MESSAGES TO DISCORD CM TRIO USEFUL INFO CHANNEL")
 			return
 		}
 	}
 }
 
-func (s *Service) deleteAllMessages(session *discordgo.Session, guide string, channel string, initialImage string) {
+func (s *Service) deleteAllMessages(ctx context.Context, session *discordgo.Session, guide string, channel string, initialImage string) {
+	logger := flume.FromContext(ctx)
 	// First, delete all the messages within the channel
 	messages, err := session.ChannelMessages(channel, 100, "", initialImage, "")
 	if err != nil {
-		s.log.Error("Failed to get all messages for deletion from the " + guide + " channel")
+		logger.Error("Failed to get all messages for deletion from the " + guide + " channel")
 		return
 	}
 	var messageIDs []string
@@ -256,11 +260,11 @@ func (s *Service) deleteAllMessages(session *discordgo.Session, guide string, ch
 	if len(messageIDs) > 0 {
 		err = session.ChannelMessagesBulkDelete(channel, messageIDs)
 		if err != nil {
-			s.log.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
+			logger.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
 			for _, message := range messageIDs {
 				err = session.ChannelMessageDelete(channel, message)
 				if err != nil {
-					s.log.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
+					logger.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
 					return
 				}
 			}

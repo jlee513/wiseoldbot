@@ -4,6 +4,7 @@ import (
 	"context"
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
 	"strconv"
 )
@@ -14,6 +15,7 @@ of the bosses, sort them, and make the discord call to create the emded with the
 and podium finish with [kc]
 */
 func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
 	hofLeaderboard := make(map[string]int)
 
 	// HOF KC
@@ -32,11 +34,11 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	}
 
 	for _, requestInfo := range allRequestInfo {
-		s.log.Info("Running HOF update for Boss: " + requestInfo.Name)
+		logger.Info("Running HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", requestInfo.AfterId, "")
 		if err != nil {
-			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
+			logger.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
 			return
 		}
 		var messageIDs []string
@@ -47,11 +49,11 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 		if len(messageIDs) > 0 {
 			err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 			if err != nil {
-				s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
+				logger.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
 				for _, message := range messageIDs {
 					err = session.ChannelMessageDelete(requestInfo.DiscChan, message)
 					if err != nil {
-						s.log.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
+						logger.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
 						return
 					}
 				}
@@ -88,17 +90,19 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 				SetDescription(placements).
 				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
 			if err != nil {
-				s.log.Error("Failed to send message for boss: " + podium.Data.BossName)
+				logger.Error("Failed to send message for boss: " + podium.Data.BossName)
 				return
 			}
 		}
 	}
 
 	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
-	s.log.Info("Successfully finished updating KC Hall Of Fame")
+	logger.Info("Successfully finished updating KC Hall Of Fame")
 }
 
 func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session, requestedBosses ...string) {
+	logger := flume.FromContext(ctx)
+
 	// HOF Speed
 	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan, AfterId: "1194999599652425778", Bosses: util.HofSpeedTzhaar}
 	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan, AfterId: "1194999714710573078", Bosses: util.HofSpeedSlayer}
@@ -144,11 +148,11 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	}
 
 	for _, requestInfo := range allRequestInfo {
-		s.log.Info("Running Speed HOF update for Boss: " + requestInfo.Name)
+		logger.Info("Running Speed HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
 		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", requestInfo.AfterId, "")
 		if err != nil {
-			s.log.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
+			logger.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
 			return
 		}
 		var messageIDs []string
@@ -158,11 +162,11 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 		if len(messageIDs) > 0 {
 			err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
 			if err != nil {
-				s.log.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
+				logger.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
 				for _, message := range messageIDs {
 					err = session.ChannelMessageDelete(requestInfo.DiscChan, message)
 					if err != nil {
-						s.log.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
+						logger.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
 						return
 					}
 				}
@@ -180,10 +184,10 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 				SetDescription("**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00")).
 				SetColor(0x1c1c1c).SetThumbnail(speed.URL).MessageEmbed)
 			if err != nil {
-				s.log.Error("Failed to send message for boss: " + bossInfo.BossName)
+				logger.Error("Failed to send message for boss: " + bossInfo.BossName)
 				return
 			}
 		}
 	}
-	s.log.Info("Successfully finished updating Speed Hall Of Fame")
+	logger.Info("Successfully finished updating Speed Hall Of Fame")
 }
