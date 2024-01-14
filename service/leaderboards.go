@@ -39,14 +39,16 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	for _, message := range messages {
 		messageIDs = append(messageIDs, message.ID)
 	}
-	err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
-	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
-		for _, message := range messageIDs {
-			err = session.ChannelMessageDelete(s.config.DiscHOFLeaderboardChan, message)
-			if err != nil {
-				s.log.Error("Failed to delete messages one by one from the leagues podium channel")
-				return
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
+		if err != nil {
+			s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(s.config.DiscHOFLeaderboardChan, message)
+				if err != nil {
+					s.log.Error("Failed to delete messages one by one from the leagues podium channel")
+					return
+				}
 			}
 		}
 	}
@@ -118,7 +120,7 @@ func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Se
 
 	// Send the Discord Embed message
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaderboardChan, embed.NewEmbed().
-		SetTitle("Ponies Clan Points Leaderboard").
+		SetTitle("Ponies Points Leaderboard").
 		SetDescription(fmt.Sprintf(leaderboard)).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
@@ -153,14 +155,16 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	for _, message := range messages {
 		messageIDs = append(messageIDs, message.ID)
 	}
-	err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
-	if err != nil {
-		s.log.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
-		for _, message := range messageIDs {
-			err = session.ChannelMessageDelete(s.config.DiscColChan, message)
-			if err != nil {
-				s.log.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
-				return err
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
+		if err != nil {
+			s.log.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(s.config.DiscColChan, message)
+				if err != nil {
+					s.log.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
+					return err
+				}
 			}
 		}
 	}
@@ -208,14 +212,16 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	for _, message := range messages {
 		messageIDs = append(messageIDs, message.ID)
 	}
-	err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
-	if err != nil {
-		s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
-		for _, message := range messageIDs {
-			err = session.ChannelMessageDelete(s.config.DiscLeaguesChan, message)
-			if err != nil {
-				s.log.Error("Failed to delete messages one by one from the leagues podium channel.")
-				return
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
+		if err != nil {
+			s.log.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(s.config.DiscLeaguesChan, message)
+				if err != nil {
+					s.log.Error("Failed to delete messages one by one from the leagues podium channel.")
+					return
+				}
 			}
 		}
 	}

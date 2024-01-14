@@ -8,6 +8,7 @@ import (
 	"log"
 	"osrs-disc-bot/util"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -17,12 +18,12 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "submission",
-			Description: "Submit screenshots for events, clan points, and speed times",
+			Description: "Submit screenshots for events, Ponies Points, and speed times",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "submission-type",
-					Description: "Choose one of the following: Event, Clan Point, or Speed",
+					Description: "Choose one of the following: Event, Ponies Point, or Speed",
 					Required:    true,
 					Choices: []*discordgo.ApplicationCommandOptionChoice{
 						{
@@ -30,8 +31,8 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 							Value: "Event",
 						},
 						{
-							Name:  "Clan Point",
-							Value: "Clan Point",
+							Name:  "Ponies Point",
+							Value: "Ponies Point",
 						},
 						{
 							Name:  "Speed",
@@ -68,35 +69,7 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 			},
 		},
 		{
-			Name:        "player-administration",
-			Description: "Administration of players",
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "option",
-					Description: "Choose one of the following: Add, Remove",
-					Required:    true,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{
-							Name:  "Add",
-							Value: "Add",
-						},
-						{
-							Name:  "Remove",
-							Value: "Remove",
-						},
-					},
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "player",
-					Description: "Player name",
-					Required:    true,
-				},
-			},
-		},
-		{
-			Name:        "guide-administration",
+			Name:        "guide",
 			Description: "Administration of Guides",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
@@ -119,6 +92,109 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 				},
 			},
 		},
+		{
+			Name:        "admin",
+			Description: "Admin commands",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "player",
+					Description: "Player administration commands",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "option",
+							Description: "Choose one of the following: Add, Remove",
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Add",
+									Value: "Add",
+								},
+								{
+									Name:  "Remove",
+									Value: "Remove",
+								},
+							},
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "player",
+							Description: "Player name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Name:        "pp-instructions",
+					Description: "Update Ponies Points instructions",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
+				{
+					Name:        "update-points",
+					Description: "Update Pp for player",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "player",
+							Description: "Player name",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "amount-of-pp",
+							Description: "Amount of Pp to manage for player",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "option",
+							Description: "Choose one of the following: Add, Remove",
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Add",
+									Value: "Add",
+								},
+								{
+									Name:  "Remove",
+									Value: "Remove",
+								},
+							},
+						},
+					},
+				},
+				{
+					Name:        "update-leaderboard",
+					Description: "Update Leaderboard for player",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "leaderboard",
+							Description: "leaderboard name",
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Kc",
+									Value: "Kc",
+								},
+								{
+									Name:  "Speed",
+									Value: "Speed",
+								},
+							},
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "thread",
+							Description: "Name of the thread you want to update",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// Iterate over all the commands and create the application command - we will save all the registered commands
@@ -135,17 +211,17 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 	}
 }
 
-func (s *Service) removeSlashCommands(session *discordgo.Session) {
-	s.log.Info("Removing all commands...")
-
-	for _, v := range s.registeredCommands {
-		s.log.Debug("REMOVING COMMAND: " + v.Name)
-		err := session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, v.ID)
-		if err != nil {
-			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
-		}
-	}
-}
+//func (s *Service) removeSlashCommands(session *discordgo.Session) {
+//	s.log.Info("Removing all commands...")
+//
+//	for _, v := range s.registeredCommands {
+//		s.log.Debug("REMOVING COMMAND: " + v.Name)
+//		err := session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, v.ID)
+//		if err != nil {
+//			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+//		}
+//	}
+//}
 
 func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid))
@@ -157,14 +233,14 @@ func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.Interac
 	case "submission":
 		returnMessage = s.handleSlashSubmission(ctx, session, i)
 		break
-	case "player-administration":
-		returnMessage = s.handlePlayerAdministrationSubmission(ctx, session, i)
-		break
 	case "guide-administration":
 		s.handleGuideAdministrationSubmission(ctx, session, i)
 		return
+	case "admin":
+		s.handleAdmin(ctx, session, i)
+		return
 	default:
-		s.log.Error("ERROR: UNKNOWN COMMAND USED")
+		s.log.Error("ERROR: UNKNOWN COMMAND USED: " + i.ApplicationCommandData().Name)
 		returnMessage = "Error: Unknown Command Used"
 	}
 
@@ -236,7 +312,7 @@ func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.
 	case "Event":
 		channelId = s.config.DiscEventApprovalChan
 		break
-	case "Clan Point":
+	case "Ponies Point":
 		channelId = s.config.DiscCpApprovalChan
 		break
 	case "Speed":
@@ -255,7 +331,7 @@ func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.
 
 	// Ensure the player used is valid
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-	// instead of running a for loop inside a for loop when adding clan points
+	// instead of running a for loop inside a for loop when adding Ponies Points
 	whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
 	whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
 
@@ -271,7 +347,7 @@ func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.
 
 	msgToBeApproved := ""
 	if typeOfSubmission == "Speed" {
-		if _, ok := util.SpeedBossNames[bossName]; !ok {
+		if _, ok := util.SpeedBossNameToCategory[bossName]; !ok {
 			s.log.Error("Incorrect boss name: ", bossName)
 			return "Incorrect boss name. Please look https://discord.com/channels/1172535371905646612/1194975272487878707/1194975272487878707 to see which boss names work."
 		}
@@ -372,15 +448,15 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 
 		s.cpscreenshots[submissionUrl] = playersInvolved
 
-		// Update the clan points
+		// Update the Ponies Points
 		// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-		// instead of running a for loop inside a for loop when adding clan points
+		// instead of running a for loop inside a for loop when adding Ponies Points
 		whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
 		whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
 
 		names := strings.Split(whitespaceStrippedMessage, ",")
 		for _, name := range names {
-			s.log.Debug("Adding clan point to: " + name)
+			s.log.Debug("Adding Ponies Point to: " + name)
 			s.cp[name] += 1
 		}
 
@@ -498,20 +574,23 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			s.log.Info(fmt.Sprintf("New Time: %+v", t.Format("15:04:05.00")))
 			s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl}
 
-			// Update the clan points
+			// Update the Ponies Points
 			// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-			// instead of running a for loop inside a for loop when adding clan points
+			// instead of running a for loop inside a for loop when adding Ponies Points
 			whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
 			whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
 
 			names := strings.Split(whitespaceStrippedMessage, ",")
 			for _, name := range names {
-				s.log.Debug("Adding clan point to: " + name)
+				s.log.Debug("Adding Ponies Point to: " + name)
 				s.cp[name] += 1
 			}
 
 			// Update the cp leaderboard
 			s.updateCpLeaderboard(ctx, session)
+
+			// Update the boss leaderboard that was updated
+			s.updateSpeedHOF(ctx, session, util.SpeedBossNameToCategory[bossName])
 
 		} else {
 			s.log.Info("KEEP TIME FOR BOSS: " + bossName)
@@ -558,8 +637,191 @@ func (s *Service) handleEventApproval(ctx context.Context, session *discordgo.Se
 	}
 }
 
-func (s *Service) handlePlayerAdministrationSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
+	options := i.ApplicationCommandData().Options[0].Options
+
+	leaderboardName := ""
+	threadName := ""
+	for _, option := range options {
+		switch option.Name {
+		case "leaderboard":
+			leaderboardName = option.Value.(string)
+			break
+		case "thread":
+			threadName = option.Value.(string)
+			break
+		}
+	}
+
+	switch leaderboardName {
+	case "Kc":
+		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Updating Leaderboard: " + leaderboardName,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		// If kc is updating, always update all of them
+		s.updateKcHOF(ctx, session)
+	case "Speed":
+		if _, ok := util.HofSpeedCategories[threadName]; ok {
+			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			s.updateSpeedHOF(ctx, session, threadName)
+		}
+	default:
+		s.log.Error("?")
+		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+
+}
+
+func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
 	options := i.ApplicationCommandData().Options
+	returnMessage := ""
+
+	switch options[0].Name {
+	case "player":
+		returnMessage = s.handlePlayerAdministration(ctx, session, i)
+		break
+	case "pp-instructions":
+		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Updating Ponies Point Instructions",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		_ = s.updateCpInstructions(ctx, session)
+	case "update-cp":
+		returnMessage = s.updateCpPoints(ctx, session, i)
+		break
+	case "update-leaderboard":
+		s.updateLeaderboard(ctx, session, i)
+		return ""
+	}
+
+	return returnMessage
+}
+
+func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.Session) string {
+	returnMessage := "Successfully updated CP Instructions!"
+
+	// First, delete all the messages within the channel
+	messages, err := session.ChannelMessages(s.config.DiscCpInformationChan, 100, "", "", "")
+	if err != nil {
+		s.log.Error("Failed to get all messages for deletion from channel: Ponies Points Information Channel")
+		return "Failed to get all messages for deletion from channel: Ponies Points Information Channel"
+	}
+	var messageIDs []string
+	for _, message := range messages {
+		messageIDs = append(messageIDs, message.ID)
+	}
+
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(s.config.DiscCpInformationChan, messageIDs)
+		if err != nil {
+			s.log.Error("Failed to delete all messages from channel: Ponies Points Information Channel, will try one by one")
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(s.config.DiscCpInformationChan, message)
+				if err != nil {
+					s.log.Error("Failed to delete messages one by one from channel: Ponies Points Information Channel")
+					return "Failed to delete messages from channel: Ponies Points Information Channel"
+				}
+			}
+		}
+	} else {
+		s.log.Debug("No messages to delete - proceeding with posting")
+	}
+
+	cpSubmissionInstruction := []string{
+		"# Instructions for ponies point and speed submission",
+		"In order to manually submit for ponies points, use the /submissions command. There will be 2 mandatory fields which are automatically placed in your chat box and there are 4 optional fields which needs to be selected when pressing the +4 more at the end of the chat box",
+		"## Mandatory Fields For All Submissions",
+		"https://i.imgur.com/Gu2WKNC.png",
+		"### submission-type\nThis has 3 options which needs to be selected from the options menu that pops up (Event, Ponies Point, Speed)",
+		"https://i.imgur.com/dfv8MRb.png",
+		"### player-names\nThis is a comma separated list of all participating ponies for the Ponies Point (i.e. H ana,Chapo,Calibre). Spaces are allowed",
+		"https://i.imgur.com/dZ4auf1.png",
+		"## Additional Fields",
+		"https://i.imgur.com/CSs9vOW.png",
+		"**NOTE: Only 1 or either the screenshot field or imgur_link field is acceptable. Using both will cause and error as well as using none!**",
+		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
+		"https://i.imgur.com/SGvWSt8.png",
+		"### imgur_link\nThis allows you to put in an i.imgur.com url instead of an image upload",
+		"https://i.imgur.com/TaoiTLG.png",
+		"### speed-time:\nThis is required for speed submissions and must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds",
+		"https://i.imgur.com/Lb7k6uP.png",
+		"### speed-bossname\nThis is required for speed submissions. It must be one of the spelling and capitalization specific boss names found: https://discord.com/channels/1172535371905646612/1194975272487878707/1194975272487878707",
+		"# Examples of submissions",
+		"## Speed Submission using screenshot",
+		"https://i.imgur.com/8IEdtLK.gif",
+		"## CP Submission using imgur",
+		"https://i.imgur.com/o1XTqZm.gif",
+	}
+
+	for _, msg := range cpSubmissionInstruction {
+		_, err := session.ChannelMessageSend(s.config.DiscCpInformationChan, msg)
+		if err != nil {
+			s.log.Error("Failed to send message to cp information channel", err)
+			return "Failed to send message to cp information channel"
+		}
+	}
+
+	keys := make([]string, 0, len(util.LootLogClanPoint))
+
+	for key := range util.LootLogClanPoint {
+		keys = append(keys, key)
+	}
+
+	sort.SliceStable(keys, func(i, j int) bool {
+		return util.LootLogClanPoint[keys[i]] < util.LootLogClanPoint[keys[j]]
+	})
+
+	var cpInstructions []string
+	currentCategory := ""
+	currentString := "# All items that count towards Ponies Points"
+
+	for _, item := range keys {
+		category := util.LootLogClanPoint[item]
+		if strings.Compare(currentCategory, category) != 0 {
+			cpInstructions = append(cpInstructions, currentString)
+			currentCategory = category
+			currentString = "## " + category + "\n"
+		}
+		currentString = currentString + "- " + item + "\n"
+	}
+
+	for _, msg := range cpInstructions {
+		_, err := session.ChannelMessageSend(s.config.DiscCpInformationChan, msg)
+		if err != nil {
+			s.log.Error("Failed to send message to cp information channel", err)
+			return "Failed to send message to cp information channel"
+		}
+	}
+
+	return returnMessage
+}
+
+func (s *Service) updateCpPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	// options := i.ApplicationCommandData().Options[0].Options
+	return "Will do eventually"
+}
+
+func (s *Service) handlePlayerAdministration(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	options := i.ApplicationCommandData().Options[0].Options
 
 	option := options[0].Value.(string)
 	player := options[1].Value.(string)

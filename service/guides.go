@@ -253,14 +253,16 @@ func (s *Service) deleteAllMessages(session *discordgo.Session, guide string, ch
 	for _, message := range messages {
 		messageIDs = append(messageIDs, message.ID)
 	}
-	err = session.ChannelMessagesBulkDelete(channel, messageIDs)
-	if err != nil {
-		s.log.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
-		for _, message := range messageIDs {
-			err = session.ChannelMessageDelete(channel, message)
-			if err != nil {
-				s.log.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
-				return
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(channel, messageIDs)
+		if err != nil {
+			s.log.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(channel, message)
+				if err != nil {
+					s.log.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
+					return
+				}
 			}
 		}
 	}

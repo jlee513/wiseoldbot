@@ -6,11 +6,12 @@ type Config struct {
 	LogDebug        bool   `mapstructure:"LOG_DEBUG"`
 	CronKickoffTime string `mapstructure:"CRON_KICKOFF_TIME"`
 
-	DiscGuildId         string `mapstructure:"DISCORD_GUILD_ID"`
-	DiscBotToken        string `mapstructure:"DISCORD_BOT_TOKEN"`
-	DiscSubChan         string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
-	DiscSignUpChan      string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
-	DiscLeaderboardChan string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+	DiscGuildId           string `mapstructure:"DISCORD_GUILD_ID"`
+	DiscBotToken          string `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscSubChan           string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
+	DiscSignUpChan        string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
+	DiscLeaderboardChan   string `mapstructure:"DISCORD_LEADERBOARD_CHANNEL"`
+	DiscCpInformationChan string `mapstructure:"DISCORD_CP_INFORMATION_CHANNEL"`
 
 	// Submission Approval Channels
 	DiscCpApprovalChan    string `mapstructure:"DISCORD_CP_APPROVAL_CHANNEL"`

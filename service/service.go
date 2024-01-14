@@ -130,7 +130,7 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
 
 	// Delete the slash commands the bot creates
-	s.removeSlashCommands(session)
+	//s.removeSlashCommands(session)
 
 	// Stop the cron scheduler
 	s.scheduler.Stop()
@@ -140,37 +140,11 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 	s.log.Info("Initializing Hall Of Fame Cron Job...")
 
-	// HOF KC
-	slayerBosses := util.HofRequestInfo{Name: "Slayer Bosses", DiscChan: s.config.DiscSlayerBossesChan, AfterId: "1194801106291785778", Bosses: util.HofSlayerBosses}
-	gwd := util.HofRequestInfo{Name: "GWD Bosses", DiscChan: s.config.DiscGwdChan, AfterId: "1194801166429724884", Bosses: util.HofGWDBosses}
-	wildy := util.HofRequestInfo{Name: "Wildy Bosses", DiscChan: s.config.DiscWildyChan, AfterId: "1194801335376285726", Bosses: util.HofWildyBosses}
-	other := util.HofRequestInfo{Name: "Other Bosses", DiscChan: s.config.DiscOtherChan, AfterId: "1194801512870846535", Bosses: util.HofOtherBosses}
-	misc := util.HofRequestInfo{Name: "Miscellaneous Bosses", DiscChan: s.config.DiscMiscChan, AfterId: "1194804397507620935", Bosses: util.HofMiscBosses}
-	dt2 := util.HofRequestInfo{Name: "Desert Treasure 2 Bosses", DiscChan: s.config.DiscDT2Chan, AfterId: "1194802032855498832", Bosses: util.HofDT2Bosses}
-	raids := util.HofRequestInfo{Name: "Raids Bosses", DiscChan: s.config.DiscRaidsChan, AfterId: "1194802206487089182", Bosses: util.HofRaidsBosses}
-	pvp := util.HofRequestInfo{Name: "PVP", DiscChan: s.config.DiscPVPChan, AfterId: "1194802450209718272", Bosses: util.HofPVPBosses}
-	clues := util.HofRequestInfo{Name: "Clues", DiscChan: s.config.DiscCluesChan, AfterId: "1194802590270103582", Bosses: util.HofCluesBosses}
-
-	// HOF Speed
-	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan, AfterId: "1194999599652425778", Bosses: util.HofSpeedTzhaar}
-	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan, AfterId: "1194999714710573078", Bosses: util.HofSpeedSlayer}
-	nightmare := util.SpeedsRequestInfo{Name: "Nightmare", DiscChan: s.config.DiscSpeedNightmareChan, AfterId: "1195000377288958023", Bosses: util.HofSpeedNightmare}
-	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan, AfterId: "1195000695594684416", Bosses: util.HofSpeedNex}
-	solo := util.SpeedsRequestInfo{Name: "Solo", DiscChan: s.config.DiscSpeedSoloChan, AfterId: "1195000959911350294", Bosses: util.HofSpeedSolo}
-	cox := util.SpeedsRequestInfo{Name: "COX", DiscChan: s.config.DiscSpeedCOXChan, AfterId: "1195001187276161155", Bosses: util.HofSpeedCox}
-	tob := util.SpeedsRequestInfo{Name: "TOB", DiscChan: s.config.DiscSpeedTOBChan, AfterId: "1195001367685779509", Bosses: util.HofSpeedTob}
-	toa := util.SpeedsRequestInfo{Name: "TOA", DiscChan: s.config.DiscSpeedTOAChan, AfterId: "1195001626604355656", Bosses: util.HofSpeedToa}
-	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, AfterId: "1195002755132174368", Bosses: util.HofSpeedAgility}
-
-	//s.updateKcHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
-	//s.updateSpeedHOF(ctx, session, tzhaar, slayer, nightmare, nex, solo, cox, tob, toa, agility)
-	//s.updateColLog(ctx, session)
-
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
 		s.log.Debug("Running Cron Job to update the Hall Of Fame, Collection Log, and Leagues...")
-		s.updateKcHOF(ctx, session, slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues)
-		s.updateSpeedHOF(ctx, session, tzhaar, slayer, nightmare, nex, solo, cox, tob, toa, agility)
+		s.updateKcHOF(ctx, session)
+		s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Theatre Of Blood", "Tombs Of Amascut", "Agility")
 		s.updateColLog(ctx, session)
 		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Leagues!")
 	})
