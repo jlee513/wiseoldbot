@@ -16,19 +16,21 @@ import (
 
 type GoogleSheetsClient struct {
 	client       *http.Client
+	feedback     string
 	cpSheet      string
 	cpScSheet    string
 	speedSheet   string
 	speedScSheet string
 }
 
-func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string) *GoogleSheetsClient {
+func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, feedback string) *GoogleSheetsClient {
 	client := new(GoogleSheetsClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.cpSheet = cpSheet
 	client.cpScSheet = cpScSheet
 	client.speedSheet = speedSheet
 	client.speedScSheet = speedScSheet
+	client.feedback = feedback
 	return client
 }
 
@@ -147,6 +149,57 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 
 		speeds[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: players, URL: url}
 	}
+}
+
+func (g GoogleSheetsClient) InitializeFeedbackFromSheet(ctx context.Context, feedback map[string]string) {
+	sheet := g.prepGoogleSheet(g.feedback)
+
+	header := true
+
+	// Set the in memory cp map with the Google sheets information
+	for _, row := range sheet.Rows {
+		if header {
+			header = false
+			continue
+		}
+		isPlayer := true
+		player := ""
+		channel := ""
+		for _, cell := range row {
+			if isPlayer {
+				player = cell.Value
+			} else {
+				channel = strings.Replace(cell.Value, "ponies", "", -1)
+				break
+			}
+			isPlayer = false
+		}
+		feedback[player] = channel
+	}
+}
+
+/*
+UpdateFeedbackChannel will take the feedback map that was being locally updated and save it to the Google Sheets
+*/
+func (g GoogleSheetsClient) UpdateFeedbackChannel(ctx context.Context, feedback map[string]string) {
+	sheet := g.prepGoogleSheet(g.feedback)
+
+	// Delete all the values in the sheet before proceeding with the insertion of clan points
+	// We are deleting as this is an easier way of ensuring deleted people are removed from the
+	// sheets without adding additional logic
+
+	// Update the Google sheets information with the in memory cp map
+	row := 1
+
+	for user, channelId := range feedback {
+		sheet.Update(row, 0, user)
+		sheet.Update(row, 1, "ponies"+channelId)
+		row++
+	}
+
+	// Make sure call Synchronize to reflect the changes
+	err := sheet.Synchronize()
+	checkError(err)
 }
 
 /*

@@ -30,6 +30,8 @@ type Service struct {
 	log              flume.Logger
 	tid              int
 
+	feedback map[string]string
+
 	registeredCommands []*discordgo.ApplicationCommand
 
 	config *util.Config
@@ -62,6 +64,8 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		log:              logger,
 		tid:              1,
 
+		feedback: make(map[string]string),
+
 		config: config,
 		client: client,
 
@@ -75,6 +79,7 @@ func (s *Service) StartDiscordIRC() {
 	ctx := context.Background()
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
+	s.sheets.InitializeFeedbackFromSheet(ctx, s.feedback)
 
 	// Create a new discord session
 	session, err := discordgo.New("Bot " + s.config.DiscBotToken)
@@ -128,6 +133,7 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.sheets.UpdateCpScreenshotsSheet(ctx, s.cpscreenshots)
 	s.sheets.UpdateSpeedSheet(ctx, s.speed)
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
+	s.sheets.UpdateFeedbackChannel(ctx, s.feedback)
 
 	// Delete the slash commands the bot creates
 	//s.removeSlashCommands(session)
@@ -162,10 +168,13 @@ func (s *Service) listenForAllChannelMessages(session *discordgo.Session, messag
 	//	return
 	//}
 
+	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", message.Author.Username))
+	defer func() { s.tid++ }()
+
 	// Run certain tasks depending on the channel the message was posted in
 	switch channel := message.ChannelID; channel {
 	case s.config.DiscLootLogChan:
-		s.listenForLootLog(session, message)
+		s.listenForLootLog(ctx, session, message)
 	default:
 		// Return if the message was not posted in one of the channels we are handling
 		return
