@@ -150,8 +150,8 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "pp-instructions",
-					Description: "Update Ponies Points instructions",
+					Name:        "submission-instructions",
+					Description: "Update Submission instructions",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
@@ -729,8 +729,8 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId)
-		index = strings.Index(msg.Content, ">")
-		feedBackMsg := "<@" + submitterId + ">\nYour submission has been accepted\n" + msg.Content[index+1:]
+		index = strings.Index(msg.Content, "Players Involved:")
+		feedBackMsg := "<@" + submitterId + ">\nYour ponies point submission has been accepted\n\n" + msg.Content[index+1:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -750,8 +750,8 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId)
-		index = strings.Index(msg.Content, ">")
-		feedBackMsg := "<@" + submitterId + ">\nYour submission has been rejected\n" + msg.Content[index+1:]
+		index = strings.Index(msg.Content, "Players Involved:")
+		feedBackMsg := "<@" + submitterId + ">\nYour ponies point submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -898,8 +898,8 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId)
-		index = strings.Index(msg.Content, ">")
-		feedBackMsg := "<@" + submitterId + ">\nYour submission has been accepted\n" + msg.Content[index+1:]
+		index = strings.Index(msg.Content, "Boss Name:")
+		feedBackMsg := "<@" + submitterId + ">\nYour speed submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -919,8 +919,8 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId)
-		index = strings.Index(msg.Content, ">")
-		feedBackMsg := "<@" + submitterId + ">\nYour submission has been rejected\n" + msg.Content[index+1:]
+		index = strings.Index(msg.Content, "Boss Name:")
+		feedBackMsg := "<@" + submitterId + ">\nYour speed submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -1059,7 +1059,7 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 	switch options[0].Name {
 	case "player":
 		returnMessage = s.handlePlayerAdministration(ctx, session, i)
-	case "pp-instructions":
+	case "submission-instructions":
 		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -1067,7 +1067,7 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
-		_ = s.updateCpInstructions(ctx, session)
+		_ = s.updateSubmissionInstructions(ctx, session)
 	case "update-cp":
 		returnMessage = s.updateCpPoints(ctx, session, i)
 	case "update-leaderboard":
@@ -1078,15 +1078,17 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 	return returnMessage
 }
 
-func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.Session) string {
-	returnMessage := "Successfully updated CP Instructions!"
+func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session) string {
+	returnMessage := "Successfully updated submission Instructions!"
 	logger := flume.FromContext(ctx)
 
+	// We will update the speed information first
+
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscCpInformationChan, 100, "", "", "")
+	messages, err := session.ChannelMessages(s.config.DiscSpeedSubInfoChan, 100, "", "", "")
 	if err != nil {
-		logger.Error("Failed to get all messages for deletion from channel: Ponies Points Information Channel")
-		return "Failed to get all messages for deletion from channel: Ponies Points Information Channel"
+		logger.Error("Failed to get all messages for deletion from channel: Speed Submission Info")
+		return "Failed to get all messages for deletion from channel: Speed Submission Info"
 	}
 	var messageIDs []string
 	for _, message := range messages {
@@ -1094,14 +1096,14 @@ func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.S
 	}
 
 	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscCpInformationChan, messageIDs)
+		err = session.ChannelMessagesBulkDelete(s.config.DiscSpeedSubInfoChan, messageIDs)
 		if err != nil {
-			logger.Error("Failed to delete all messages from channel: Ponies Points Information Channel, will try one by one")
+			logger.Error("Failed to delete all messages from channel: Speed Submission Info, will try one by one")
 			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscCpInformationChan, message)
+				err = session.ChannelMessageDelete(s.config.DiscSpeedSubInfoChan, message)
 				if err != nil {
-					logger.Error("Failed to delete messages one by one from channel: Ponies Points Information Channel")
-					return "Failed to delete messages from channel: Ponies Points Information Channel"
+					logger.Error("Failed to delete messages one by one from channel: Speed Submission Info")
+					return "Failed to delete messages from channel: Speed Submission Info"
 				}
 			}
 		}
@@ -1109,34 +1111,96 @@ func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.S
 		logger.Debug("No messages to delete - proceeding with posting")
 	}
 
-	cpSubmissionInstruction := []string{
-		"# Instructions for ponies point and speed submission",
-		"In order to manually submit for ponies points, use the /submissions command. There will be 2 mandatory fields which are automatically placed in your chat box and there are 4 optional fields which needs to be selected when pressing the +4 more at the end of the chat box",
-		"## Mandatory Fields For All Submissions",
-		"https://i.imgur.com/Gu2WKNC.png",
-		"### submission-type\nThis has 3 options which needs to be selected from the options menu that pops up (Event, Ponies Point, Speed)",
-		"https://i.imgur.com/dfv8MRb.png",
-		"### player-names\nThis is a comma separated list of all participating ponies for the Ponies Point (i.e. H ana,Chapo,Calibre). Spaces are allowed",
-		"https://i.imgur.com/dZ4auf1.png",
+	speedSubmissionInstruction := []string{
+		"# Instructions for Speed Submissions",
+		"In order to manually submit for speed times, use the /speed-submissions command. There will be **4 mandatory fields** which are automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
+		"## Mandatory Fields For Speed Submissions",
+		"https://i.imgur.com/MK6BzCK.png",
+		"### category\nThis has a list of all the speed categories you see in the hof-speeds forum. Select one of these in order to proceed in the submission",
+		"https://i.imgur.com/uVDhk9U.png",
+		"### boss\nThis has a list of all the bosses in the previously selected category. Select one of these options to make a speed submission for",
+		"https://i.imgur.com/gXD9bHy.png",
+		"### speed-time\nThe time must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds. The following example is 20 hours, 20 minutes, 20 seconds and 1 tick",
+		"https://i.imgur.com/uzwDOL3.png",
+		"### player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
+		"https://i.imgur.com/ML14RzQ.png",
 		"## Additional Fields",
-		"https://i.imgur.com/CSs9vOW.png",
+		"https://i.imgur.com/dD4FKb9.png",
 		"**NOTE: Only 1 or either the screenshot field or i-imgur-link field is acceptable. Using both will cause and error as well as using none!**",
 		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
 		"https://i.imgur.com/SGvWSt8.png",
 		"### i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
 		"https://i.imgur.com/TaoiTLG.png",
-		"### speed-time:\nThis is required for speed submissions and must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds",
-		"https://i.imgur.com/Lb7k6uP.png",
-		"### speed-bossname\nThis is required for speed submissions. It must be one of the spelling and capitalization specific boss names found: https://discord.com/channels/1172535371905646612/1194975272487878707/1194975272487878707",
 		"# Examples of submissions",
 		"## Speed Submission using screenshot",
-		"https://i.imgur.com/8IEdtLK.gif",
-		"## CP Submission using imgur",
-		"https://i.imgur.com/o1XTqZm.gif",
+		"https://i.imgur.com/IlgOsfy.gif",
+		"# What happens when your screenshot gets approved/denied",
+		"Once a moderator approves/denies your submission, a message will popup in a private channel between you and the moderators with feedback on your submission",
+		"https://i.imgur.com/V5AiTyZ.png",
+		"If you have an issue, you can ask the moderators there about what was incorrect about your submission.",
 	}
 
-	for _, msg := range cpSubmissionInstruction {
-		_, err := session.ChannelMessageSend(s.config.DiscCpInformationChan, msg)
+	for _, msg := range speedSubmissionInstruction {
+		_, err := session.ChannelMessageSend(s.config.DiscSpeedSubInfoChan, msg)
+		if err != nil {
+			logger.Error("Failed to send message to cp information channel", err)
+			return "Failed to send message to cp information channel"
+		}
+	}
+
+	// Now we will update the clan points information
+
+	// First, delete all the messages within the channel
+	messages, err = session.ChannelMessages(s.config.DiscPPInfoChan, 100, "", "", "")
+	if err != nil {
+		logger.Error("Failed to get all messages for deletion from channel: Speed Submission Info")
+		return "Failed to get all messages for deletion from channel: Speed Submission Info"
+	}
+	for _, message := range messages {
+		messageIDs = append(messageIDs, message.ID)
+	}
+
+	if len(messageIDs) > 0 {
+		err = session.ChannelMessagesBulkDelete(s.config.DiscPPInfoChan, messageIDs)
+		if err != nil {
+			logger.Error("Failed to delete all messages from channel: Speed Submission Info, will try one by one")
+			for _, message := range messageIDs {
+				err = session.ChannelMessageDelete(s.config.DiscPPInfoChan, message)
+				if err != nil {
+					logger.Error("Failed to delete messages one by one from channel: Speed Submission Info")
+					return "Failed to delete messages from channel: Speed Submission Info"
+				}
+			}
+		}
+	} else {
+		logger.Debug("No messages to delete - proceeding with posting")
+	}
+
+	ppSubmissionInstruction := []string{
+		"# Instructions for Ponies Points Submissions",
+		"In order to manually submit for ponies points, use the /pp-submissions command. There will be **1 mandatory field** which is automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
+		"## Mandatory Fields For Speed Submissions",
+		"https://i.imgur.com/hi66ThP.png",
+		"### player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
+		"https://i.imgur.com/lzYUZUz.png",
+		"## Additional Fields",
+		"https://i.imgur.com/dD4FKb9.png",
+		"**NOTE: Only 1 or either the screenshot field or i-imgur-link field is acceptable. Using both will cause and error as well as using none!**",
+		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
+		"https://i.imgur.com/SGvWSt8.png",
+		"### i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
+		"https://i.imgur.com/TaoiTLG.png",
+		"# Examples of submissions",
+		"## PP Submission using screenshot",
+		"https://i.imgur.com/FAFCyim.gif",
+		"# What happens when your screenshot gets approved/denied",
+		"Once a moderator approves/denies your submission, a message will popup in a private channel between you and the moderators with feedback on your submission",
+		"https://i.imgur.com/QUvB4oo.png",
+		"If you have an issue, you can ask the moderators there about what was incorrect about your submission.",
+	}
+
+	for _, msg := range ppSubmissionInstruction {
+		_, err := session.ChannelMessageSend(s.config.DiscPPInfoChan, msg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
 			return "Failed to send message to cp information channel"
@@ -1155,7 +1219,7 @@ func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.S
 
 	var cpInstructions []string
 	currentCategory := ""
-	currentString := "# All items that count towards Ponies Points"
+	currentString := "# The following items will count for Ponies Points"
 
 	for _, item := range keys {
 		category := util.LootLogClanPoint[item]
@@ -1168,7 +1232,7 @@ func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.S
 	}
 
 	for _, msg := range cpInstructions {
-		_, err := session.ChannelMessageSend(s.config.DiscCpInformationChan, msg)
+		_, err := session.ChannelMessageSend(s.config.DiscPPInfoChan, msg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
 			return "Failed to send message to cp information channel"
