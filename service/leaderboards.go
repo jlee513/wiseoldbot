@@ -267,25 +267,18 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 		switch true {
 		case points >= bronze && points < iron:
 			placements = placements + "<:bronze_trophy:1178124557933101056>\n"
-			break
 		case points >= iron && points < steel:
 			placements = placements + "<:iron_trophy:1178124556846780458>\n"
-			break
 		case points >= steel && points < mithril:
 			placements = placements + "<:steel_trophy:1178124555718508617>\n"
-			break
 		case points >= mithril && points < adamant:
 			placements = placements + "<:mithril_trophy:1178124554820931755>\n"
-			break
 		case points >= adamant && points < runeTier:
 			placements = placements + "<:adamant_trophy:1178124552971231365>\n"
-			break
 		case points >= runeTier && points < dragon:
 			placements = placements + "<:rune_trophy:1178124551188664350>\n"
-			break
 		case points >= dragon:
 			placements = placements + "<:dragon_trophy:1178124549141839893>\n"
-			break
 		default:
 			placements = placements + "\n"
 		}

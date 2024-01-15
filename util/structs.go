@@ -68,6 +68,9 @@ type Config struct {
 	DiscSpeedCOXChan       string `mapstructure:"DISCORD_SPEED_COX_CHANNEL"`
 	DiscSpeedTOBChan       string `mapstructure:"DISCORD_SPEED_TOB_CHANNEL"`
 	DiscSpeedTOAChan       string `mapstructure:"DISCORD_SPEED_TOA_CHANNEL"`
+	DiscSpeedCOXCMChan     string `mapstructure:"DISCORD_SPEED_COX_CM_CHANNEL"`
+	DiscSpeedTOBHMChan     string `mapstructure:"DISCORD_SPEED_TOB_HM_CHANNEL"`
+	DiscSpeedTOAEChan      string `mapstructure:"DISCORD_SPEED_TOA_E_CHANNEL"`
 	DiscSpeedAgilityChan   string `mapstructure:"DISCORD_SPEED_AGILITY_CHANNEL"`
 }
 

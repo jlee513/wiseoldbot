@@ -71,15 +71,12 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 				case 1:
 					placements = placements + ":first_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 3)
-					break
 				case 2:
 					placements = placements + ":second_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 2)
-					break
 				case 3:
 					placements = placements + ":third_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 1)
-					break
 				}
 				placements = placements + podium.Data.Players[k].Username + " [" + strconv.Itoa(podium.Data.Players[k].Kc) + "]\n"
 			}
@@ -97,7 +94,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	}
 
 	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
-	logger.Info("Successfully finished updating KC Hall Of Fame")
+	logger.Info("Successfully updated KC Hall Of Fame")
 }
 
 func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session, requestedBosses ...string) {
@@ -110,8 +107,11 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan, AfterId: "1195000695594684416", Bosses: util.HofSpeedNex}
 	solo := util.SpeedsRequestInfo{Name: "Solo Bosses", DiscChan: s.config.DiscSpeedSoloChan, AfterId: "1195000959911350294", Bosses: util.HofSpeedSolo}
 	cox := util.SpeedsRequestInfo{Name: "Chambers Of Xeric", DiscChan: s.config.DiscSpeedCOXChan, AfterId: "1195001187276161155", Bosses: util.HofSpeedCox}
+	coxcm := util.SpeedsRequestInfo{Name: "Chambers Of Xeric Challenge Mode", DiscChan: s.config.DiscSpeedCOXCMChan, AfterId: "1196437479713165322", Bosses: util.HofSpeedCoxCm}
 	tob := util.SpeedsRequestInfo{Name: "Theatre Of Blood", DiscChan: s.config.DiscSpeedTOBChan, AfterId: "1195001367685779509", Bosses: util.HofSpeedTob}
+	tobhm := util.SpeedsRequestInfo{Name: "Theatre Of Blood Hard Mode", DiscChan: s.config.DiscSpeedTOBHMChan, AfterId: "1196437597053001758", Bosses: util.HofSpeedTobHm}
 	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan, AfterId: "1195001626604355656", Bosses: util.HofSpeedToa}
+	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan, AfterId: "1196437695522672650", Bosses: util.HofSpeedToae}
 	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, AfterId: "1195002755132174368", Bosses: util.HofSpeedAgility}
 
 	var allRequestInfo []util.SpeedsRequestInfo
@@ -119,31 +119,28 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 		switch boss {
 		case "TzHaar":
 			allRequestInfo = append(allRequestInfo, tzhaar)
-			break
 		case "Slayer":
 			allRequestInfo = append(allRequestInfo, slayer)
-			break
 		case "Nightmare":
 			allRequestInfo = append(allRequestInfo, nightmare)
-			break
 		case "Nex":
 			allRequestInfo = append(allRequestInfo, nex)
-			break
 		case "Solo Bosses":
 			allRequestInfo = append(allRequestInfo, solo)
-			break
 		case "Chambers Of Xeric":
 			allRequestInfo = append(allRequestInfo, cox)
-			break
+		case "Chambers Of Xeric Challenge Mode":
+			allRequestInfo = append(allRequestInfo, coxcm)
 		case "Theatre Of Blood":
 			allRequestInfo = append(allRequestInfo, tob)
-			break
+		case "Theatre Of Blood Hard Mode":
+			allRequestInfo = append(allRequestInfo, tobhm)
 		case "Tombs Of Amascut":
 			allRequestInfo = append(allRequestInfo, toa)
-			break
+		case "Tombs Of Amascut Expert":
+			allRequestInfo = append(allRequestInfo, toae)
 		case "Agility":
 			allRequestInfo = append(allRequestInfo, agility)
-			break
 		}
 	}
 
@@ -189,5 +186,5 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 			}
 		}
 	}
-	logger.Info("Successfully finished updating Speed Hall Of Fame")
+	logger.Info("Successfully updated Speed Hall Of Fame")
 }
