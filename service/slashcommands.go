@@ -199,6 +199,27 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
+					Name:        "update-speed",
+					Description: "Update Speed times",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:         "category",
+							Description:  "Category of speed",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
+						},
+						{
+							Name:         "boss",
+							Description:  "Boss name submitting for",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
+						},
+					},
+				},
+				{
 					Name:        "update-leaderboard",
 					Description: "Update Leaderboard for player",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
@@ -1086,6 +1107,8 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		_ = s.updateSubmissionInstructions(ctx, session)
 	case "update-cp":
 		returnMessage = s.updateCpPoints(ctx, session, i)
+	case "update-speed":
+		returnMessage = s.updateSpeedAdmin(ctx, session, i)
 	case "update-leaderboard":
 		s.updateLeaderboard(ctx, session, i)
 		return
@@ -1100,6 +1123,216 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 	})
 
 	return
+}
+
+func (s *Service) updateSpeedAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		logger := flume.FromContext(ctx)
+		options := i.ApplicationCommandData().Options[0].Options
+
+		category := ""
+		boss := ""
+
+		for _, option := range options {
+			switch option.Name {
+			case "category":
+				category = option.Value.(string)
+			case "boss":
+				boss = option.Value.(string)
+			}
+		}
+
+		logger.Info("Resetting speed for: " + boss)
+
+		// Ensure the boss name is okay
+		if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
+			logger.Error("Incorrect boss name: ", boss)
+			return "Incorrect boss name. Please look ensure to select one of the options for boss names."
+		}
+
+		// Convert the time string into time
+		var t time.Time
+		speedTimeSplit := []string{"22", "22", "22.60"}
+
+		for index, splitTime := range speedTimeSplit {
+			switch index {
+			case 0:
+				c, _ := strconv.Atoi(splitTime)
+				t = t.Add(time.Duration(c) * time.Hour)
+			case 1:
+				c, _ := strconv.Atoi(splitTime)
+				t = t.Add(time.Duration(c) * time.Minute)
+			case 2:
+				if strings.Contains(splitTime, ".") {
+					milliAndSeconds := strings.Split(splitTime, ".")
+					c, _ := strconv.Atoi(milliAndSeconds[0])
+					c2, _ := strconv.Atoi(milliAndSeconds[1])
+					t = t.Add(time.Duration(c) * time.Second)
+					t = t.Add(time.Duration(c2) * time.Millisecond)
+				} else {
+					c, _ := strconv.Atoi(splitTime)
+					t = t.Add(time.Duration(c) * time.Second)
+				}
+			}
+		}
+
+		s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
+		s.updateSpeedHOF(ctx, session, category)
+
+		// If nothing wrong happened, send a happy message back to the submitter
+		return "Speed submission successfully submitted! Awaiting approval from a moderator!"
+
+		return ""
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		logger := flume.FromContext(ctx)
+		data := i.ApplicationCommandData().Options[0]
+		var choices []*discordgo.ApplicationCommandOptionChoice
+		switch {
+		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+		case data.Options[0].Focused:
+			choices = []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "TzHaar",
+					Value: "TzHaar",
+				},
+				{
+					Name:  "Chambers Of Xeric",
+					Value: "Chambers Of Xeric",
+				},
+				{
+					Name:  "Chambers Of Xeric Challenge Mode",
+					Value: "Chambers Of Xeric Challenge Mode",
+				},
+				{
+					Name:  "Nightmare",
+					Value: "Nightmare",
+				},
+				{
+					Name:  "Theatre Of Blood Hard Mode",
+					Value: "Theatre Of Blood Hard Mode",
+				},
+				{
+					Name:  "Agility",
+					Value: "Agility",
+				},
+				{
+					Name:  "Tombs Of Amascut Expert",
+					Value: "Tombs Of Amascut Expert",
+				},
+				{
+					Name:  "Solo Bosses",
+					Value: "Solo Bosses",
+				},
+				{
+					Name:  "Nex",
+					Value: "Nex",
+				},
+				{
+					Name:  "Slayer",
+					Value: "Slayer",
+				},
+			}
+		case data.Options[1].Focused:
+			switch data.Options[0].Value.(string) {
+			case "TzHaar":
+				for _, option := range util.HofSpeedTzhaar {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Chambers Of Xeric":
+				for _, option := range util.HofSpeedCox {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Chambers Of Xeric Challenge Mode":
+				for _, option := range util.HofSpeedCoxCm {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Nightmare":
+				for _, option := range util.HofSpeedNightmare {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Theatre Of Blood":
+				for _, option := range util.HofSpeedTob {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Theatre Of Blood Hard Mode":
+				for _, option := range util.HofSpeedTobHm {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Agility":
+				for _, option := range util.HofSpeedAgility {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Tombs Of Amascut":
+				for _, option := range util.HofSpeedToa {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Tombs Of Amascut Expert":
+				for _, option := range util.HofSpeedToae {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Solo Bosses":
+				for _, option := range util.HofSpeedSolo {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Nex":
+				for _, option := range util.HofSpeedNex {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Slayer":
+				for _, option := range util.HofSpeedSlayer {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			}
+		}
+
+		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
+		if err != nil {
+			logger.Error("Failed to handle speed autocomplete: " + err.Error())
+		}
+	}
+	return ""
 }
 
 func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session) string {

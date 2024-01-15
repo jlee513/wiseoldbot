@@ -129,11 +129,17 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	<-sigchan
 
 	// Once the program is interrupted, update the Google Sheet clan points & screenshot sheets
+	s.log.Debug("Running cp sheets updates...")
 	s.sheets.UpdateCpSheet(ctx, s.cp)
+	s.log.Debug("Running cp sc sheets updates...")
 	s.sheets.UpdateCpScreenshotsSheet(ctx, s.cpscreenshots)
+	s.log.Debug("Running speed updates...")
 	s.sheets.UpdateSpeedSheet(ctx, s.speed)
+	s.log.Debug("Running speed sc sheets updates...")
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
+	s.log.Debug("Running feedback sheets updates...")
 	s.sheets.UpdateFeedbackChannel(ctx, s.feedback)
+	s.log.Debug("Finished running sheets updates")
 
 	// Delete the slash commands the bot creates
 	//session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, "")
