@@ -127,11 +127,9 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 			case 0:
 				c, _ := strconv.Atoi(splitTime)
 				t = t.Add(time.Duration(c) * time.Hour)
-				break
 			case 1:
 				c, _ := strconv.Atoi(splitTime)
 				t = t.Add(time.Duration(c) * time.Minute)
-				break
 			case 2:
 				if strings.Contains(splitTime, ".") {
 					milliAndSeconds := strings.Split(splitTime, ".")
@@ -143,7 +141,6 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 					c, _ := strconv.Atoi(splitTime)
 					t = t.Add(time.Duration(c) * time.Second)
 				}
-				break
 			}
 		}
 

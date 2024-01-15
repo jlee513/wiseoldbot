@@ -18,28 +18,29 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 	logger := flume.FromContext(ctx)
 	commands := []*discordgo.ApplicationCommand{
 		{
-			Name:        "submission",
-			Description: "Submit screenshots for events, Ponies Points, and speed times",
+			Name:        "speed-submission",
+			Description: "Speed submissions for ponies",
+			Type:        discordgo.ChatApplicationCommand,
 			Options: []*discordgo.ApplicationCommandOption{
 				{
+					Name:         "category",
+					Description:  "Category of speed",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
+					Name:         "boss",
+					Description:  "Boss name submitting for",
+					Type:         discordgo.ApplicationCommandOptionString,
+					Required:     true,
+					Autocomplete: true,
+				},
+				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "submission-type",
-					Description: "Choose one of the following: Event, Ponies Point, or Speed",
+					Name:        "speed-time",
+					Description: "Only use if making a speed submission in format: hh:mm:ss.ms",
 					Required:    true,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{
-							Name:  "Event",
-							Value: "Event",
-						},
-						{
-							Name:  "Ponies Point",
-							Value: "Ponies Point",
-						},
-						{
-							Name:  "Speed",
-							Value: "Speed",
-						},
-					},
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -54,18 +55,30 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "imgur_link",
+					Name:        "i-imgur-link",
 					Description: "Imgur link of the submission",
 				},
+			},
+		},
+		{
+			Name:        "pp-submission",
+			Description: "Ponies points submissions for ponies",
+			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "speed-time",
-					Description: "Only use if making a speed submission in format: xx:xx:xx.xx",
+					Name:        "player-names",
+					Description: "Comma separated list of players involved",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionAttachment,
+					Name:        "screenshot",
+					Description: "Screenshot of the submission",
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "speed-bossname",
-					Description: "Only use if making a speed submission",
+					Name:        "i-imgur-link",
+					Description: "Imgur link of the submission",
 				},
 			},
 		},
@@ -90,6 +103,16 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					Name:        "guide",
 					Description: "Guide name",
 					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "trio-cm",
+							Value: "trio-cm",
+						},
+						{
+							Name:  "tob",
+							Value: "tob",
+						},
+					},
 				},
 			},
 		},
@@ -172,25 +195,18 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "leaderboard",
-							Description: "leaderboard name",
-							Required:    true,
-							Choices: []*discordgo.ApplicationCommandOptionChoice{
-								{
-									Name:  "Kc",
-									Value: "Kc",
-								},
-								{
-									Name:  "Speed",
-									Value: "Speed",
-								},
-							},
+							Type:         discordgo.ApplicationCommandOptionString,
+							Name:         "leaderboard",
+							Description:  "leaderboard name",
+							Required:     true,
+							Autocomplete: true,
 						},
 						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "thread",
-							Description: "Name of the thread you want to update",
+							Name:         "thread",
+							Description:  "Name of the thread you want to update",
+							Type:         discordgo.ApplicationCommandOptionString,
+							Required:     true,
+							Autocomplete: true,
 						},
 					},
 				},
@@ -232,15 +248,16 @@ func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.Interac
 	returnMessage := ""
 
 	switch i.ApplicationCommandData().Name {
-	case "submission":
-		returnMessage = s.handleSlashSubmission(ctx, session, i)
-		break
-	case "guide-administration":
+	case "pp-submission":
+		returnMessage = s.handlePPSubmission(ctx, session, i)
+	case "guide":
 		s.handleGuideAdministrationSubmission(ctx, session, i)
 		return
 	case "admin":
 		s.handleAdmin(ctx, session, i)
 		return
+	case "speed-submission":
+		returnMessage = s.handleSpeedSubmission(ctx, session, i)
 	default:
 		logger.Error("ERROR: UNKNOWN COMMAND USED: " + i.ApplicationCommandData().Name)
 		returnMessage = "Error: Unknown Command Used"
@@ -255,43 +272,273 @@ func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.Interac
 	})
 }
 
+func (s *Service) handleSpeedSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		logger := flume.FromContext(ctx)
+		options := i.ApplicationCommandData().Options
+
+		boss := ""
+		speedTime := ""
+		screenshot := ""
+		imgurUrl := ""
+		playersInvolved := ""
+
+		for _, option := range options {
+			switch option.Name {
+			case "boss":
+				boss = option.Value.(string)
+			case "speed-time":
+				speedTime = option.Value.(string)
+			case "player-names":
+				playersInvolved = option.Value.(string)
+			case "screenshot":
+				screenshot = i.ApplicationCommandData().Resolved.Attachments[option.Value.(string)].URL
+			case "i-imgur-link":
+				imgurUrl = option.Value.(string)
+			}
+		}
+
+		logger.Info("Speed submission created by: " + i.Member.User.Username)
+
+		// Can only have either a screenshot or an imgur link
+		url := ""
+		if len(screenshot) == 0 && len(imgurUrl) == 0 {
+			logger.Error("No screenshot has been submitted")
+			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		} else if len(screenshot) > 0 && len(imgurUrl) > 0 {
+			logger.Error("Two screenshots has been submitted")
+			return "Two images has been submitted - please provide either a screenshot or an imgur link in their respective sections, not both."
+		} else if len(imgurUrl) > 0 {
+			if !strings.Contains(imgurUrl, "https://i.imgur.com") {
+				logger.Error("Incorrect link used in imgur url submission: " + imgurUrl)
+				return "Incorrect link used in imgur url submission, please use https://i.imgur.com when submitting using the imgur url option."
+			} else {
+				url = imgurUrl
+			}
+		} else {
+			url = screenshot
+		}
+
+		// Ensure the player used is valid
+		// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
+		// instead of running a for loop inside a for loop when adding Ponies Points
+		whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
+		whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
+
+		logger.Debug("Submitted names: " + whitespaceStrippedMessage)
+		names := strings.Split(whitespaceStrippedMessage, ",")
+		for _, name := range names {
+			if _, ok := s.cp[name]; !ok {
+				// We have a submission for an unknown person, throw an error
+				logger.Error("Unknown player submitted: " + name)
+				return "Unknown player submitted. Please ensure all the names are correct or sign-up the following person: " + name
+			}
+		}
+
+		// Ensure the boss name is okay
+		if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
+			logger.Error("Incorrect boss name: ", boss)
+			return "Incorrect boss name. Please look ensure to select one of the options for boss names."
+		}
+
+		// Ensure the format is hh:mm:ss:mmm
+		reg := regexp.MustCompile("^\\d\\d:\\d\\d:\\d\\d.\\d\\d$")
+		if !reg.Match([]byte(speedTime)) {
+			logger.Error("Invalid time format: ", speedTime)
+			return "Incorrect time format. Please use the following format: hh:mm:ss.ms"
+		}
+
+		msgToBeApproved := fmt.Sprintf("<@&1194691758353821847>\nSubmitter: %s\nUser Id: %s\nBoss Name: %s\nTime: %s\nPlayers Involved: %s\n%+v", i.Member.User.Username, i.Member.User.ID, boss, speedTime, playersInvolved, url)
+
+		// If we have the submission is valid, send the submission information to the admin channel
+		msg, err := session.ChannelMessageSend(s.config.DiscSpeedApprovalChan, msgToBeApproved)
+		if err != nil {
+			logger.Error("Failed to send message to admin channel", err)
+			return "Issue with submitting the speed submission, please contact a dev to fix this issue."
+		} else {
+			logger.Info("Submission sent to moderators for approval")
+			// Add a check and x reaction to the message to accept or reject the submission
+			session.MessageReactionAdd(s.config.DiscSpeedApprovalChan, msg.ID, "✅")
+			session.MessageReactionAdd(s.config.DiscSpeedApprovalChan, msg.ID, "❌")
+		}
+
+		// If nothing wrong happened, send a happy message back to the submitter
+		return "Speed submission successfully submitted! Awaiting approval from a moderator!"
+
+		return ""
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		logger := flume.FromContext(ctx)
+		data := i.ApplicationCommandData()
+		var choices []*discordgo.ApplicationCommandOptionChoice
+		switch {
+		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+		case data.Options[0].Focused:
+			choices = []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "TzHaar",
+					Value: "TzHaar",
+				},
+				{
+					Name:  "Chambers Of Xeric",
+					Value: "Chambers Of Xeric",
+				},
+				{
+					Name:  "Chambers Of Xeric Challenge Mode",
+					Value: "Chambers Of Xeric Challenge Mode",
+				},
+				{
+					Name:  "Nightmare",
+					Value: "Nightmare",
+				},
+				{
+					Name:  "Theatre Of Blood Hard Mode",
+					Value: "Theatre Of Blood Hard Mode",
+				},
+				{
+					Name:  "Agility",
+					Value: "Agility",
+				},
+				{
+					Name:  "Tombs Of Amascut Expert",
+					Value: "Tombs Of Amascut Expert",
+				},
+				{
+					Name:  "Solo Bosses",
+					Value: "Solo Bosses",
+				},
+				{
+					Name:  "Nex",
+					Value: "Nex",
+				},
+				{
+					Name:  "Slayer",
+					Value: "Slayer",
+				},
+			}
+		case data.Options[1].Focused:
+			switch data.Options[0].Value.(string) {
+			case "TzHaar":
+				for _, option := range util.HofSpeedTzhaar {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Chambers Of Xeric":
+				for _, option := range util.HofSpeedCox {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Chambers Of Xeric Challenge Mode":
+				for _, option := range util.HofSpeedCoxCm {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Nightmare":
+				for _, option := range util.HofSpeedNightmare {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Theatre Of Blood":
+				for _, option := range util.HofSpeedTob {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Theatre Of Blood Hard Mode":
+				for _, option := range util.HofSpeedTobHm {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Agility":
+				for _, option := range util.HofSpeedAgility {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Tombs Of Amascut":
+				for _, option := range util.HofSpeedToa {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Tombs Of Amascut Expert":
+				for _, option := range util.HofSpeedToae {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Solo Bosses":
+				for _, option := range util.HofSpeedSolo {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Nex":
+				for _, option := range util.HofSpeedNex {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			case "Slayer":
+				for _, option := range util.HofSpeedSlayer {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  option.BossName,
+						Value: option.BossName,
+					})
+				}
+			}
+		}
+
+		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
+		if err != nil {
+			logger.Error("Failed to handle speed autocomplete: " + err.Error())
+		}
+	}
+	return ""
+}
+
 /* All the slash commands handling functions */
-func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
 	logger := flume.FromContext(ctx)
 	options := i.ApplicationCommandData().Options
-	channelId := ""
 
-	typeOfSubmission := ""
 	playersInvolved := ""
 	screenshot := ""
 	imgurUrl := ""
-	speedTime := ""
-	bossName := ""
 
 	for _, option := range options {
 		switch option.Name {
-		case "submission-type":
-			typeOfSubmission = option.Value.(string)
-			break
 		case "player-names":
 			playersInvolved = option.Value.(string)
-			break
 		case "screenshot":
 			screenshot = i.ApplicationCommandData().Resolved.Attachments[option.Value.(string)].URL
-			break
-		case "imgur_link":
+		case "i-imgur-link":
 			imgurUrl = option.Value.(string)
-			break
-		case "speed-time":
-			speedTime = option.Value.(string)
-			break
-		case "speed-bossname":
-			bossName = option.Value.(string)
-			break
 		}
 	}
 
-	logger.Info("Submission created by: " + i.Member.User.Username + " with type: " + typeOfSubmission)
+	logger.Info("PP submission created by: " + i.Member.User.Username)
 
 	// Can only have either a screenshot or an imgur link
 	url := ""
@@ -312,28 +559,6 @@ func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.
 		url = screenshot
 	}
 
-	// Ensure the right submission type is used
-	switch typeOfSubmission {
-	case "Event":
-		channelId = s.config.DiscEventApprovalChan
-		break
-	case "Ponies Point":
-		channelId = s.config.DiscCpApprovalChan
-		break
-	case "Speed":
-		channelId = s.config.DiscSpeedApprovalChan
-		break
-	default:
-		logger.Error("Unknown submission type used: " + typeOfSubmission)
-		return "Unknown submission type used. Please use the drop down options when selecting type."
-	}
-
-	// If we have speed but don't have the time, send back an error message
-	if typeOfSubmission == "Speed" && len(options) < 5 {
-		logger.Error("Time or boss name not provided in submission")
-		return "Time or boss name was not provided during submission, click the +2 more at the end of the submission and click speed-time and speed-boss in the popup to enter in the time and boss name."
-	}
-
 	// Ensure the player used is valid
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 	// instead of running a for loop inside a for loop when adding Ponies Points
@@ -350,39 +575,22 @@ func (s *Service) handleSlashSubmission(ctx context.Context, session *discordgo.
 		}
 	}
 
-	msgToBeApproved := ""
-	if typeOfSubmission == "Speed" {
-		if _, ok := util.SpeedBossNameToCategory[bossName]; !ok {
-			logger.Error("Incorrect boss name: ", bossName)
-			return "Incorrect boss name. Please look https://discord.com/channels/1172535371905646612/1194975272487878707/1194975272487878707 to see which boss names work."
-		}
-
-		// Ensure the format is hh:mm:ss:mmm
-		reg := regexp.MustCompile("^\\d\\d:\\d\\d:\\d\\d.\\d\\d$")
-		if !reg.Match([]byte(speedTime)) {
-			logger.Error("Invalid time format: ", speedTime)
-			return "Incorrect time format. Please use the following format: hh:mm:ss.mmm"
-		}
-
-		msgToBeApproved = fmt.Sprintf("<@&1194691758353821847>\nSubmitter: %s\nUser Id: %s\nBoss Name: %s\nTime: %s\nPlayers Involved: %s\n%+v", i.Member.User.Username, i.Member.User.ID, bossName, speedTime, playersInvolved, url)
-	} else {
-		msgToBeApproved = fmt.Sprintf("<@&1194691758353821847>\nSubmitter: %s\nUser Id: %s\nPlayers Involved: %s\n%+v", i.Member.User.Username, i.Member.User.ID, playersInvolved, url)
-	}
+	msgToBeApproved := fmt.Sprintf("<@&1194691758353821847>\nSubmitter: %s\nUser Id: %s\nPlayers Involved: %s\n%+v", i.Member.User.Username, i.Member.User.ID, playersInvolved, url)
 
 	// If we have the submission is valid, send the submission information to the admin channel
-	msg, err := session.ChannelMessageSend(channelId, msgToBeApproved)
+	msg, err := session.ChannelMessageSend(s.config.DiscCpApprovalChan, msgToBeApproved)
 	if err != nil {
 		logger.Error("Failed to send message to admin channel", err)
 		return "Issue with submitting, please contact a dev to fix this issue."
 	} else {
 		logger.Info("Submission sent to moderators for approval")
 		// Add a check and x reaction to the message to accept or reject the submission
-		session.MessageReactionAdd(channelId, msg.ID, "✅")
-		session.MessageReactionAdd(channelId, msg.ID, "❌")
+		session.MessageReactionAdd(s.config.DiscCpApprovalChan, msg.ID, "✅")
+		session.MessageReactionAdd(s.config.DiscCpApprovalChan, msg.ID, "❌")
 	}
 
 	// If nothing wrong happened, send a happy message back to the submitter
-	return "Successfully submitted! Awaiting approval from a moderator!"
+	return "Ponies points successfully submitted! Awaiting approval from a moderator!"
 }
 
 func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.MessageReactionAdd) {
@@ -398,13 +606,10 @@ func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.Me
 	switch r.ChannelID {
 	case s.config.DiscCpApprovalChan:
 		s.handleCpApproval(ctx, session, r)
-		break
 	case s.config.DiscSpeedApprovalChan:
 		s.handleSpeedApproval(ctx, session, r)
-		break
 	case s.config.DiscEventApprovalChan:
 		s.handleEventApproval(ctx, session, r)
-		break
 	}
 }
 
@@ -637,11 +842,9 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			case 0:
 				c, _ := strconv.Atoi(splitTime)
 				t = t.Add(time.Duration(c) * time.Hour)
-				break
 			case 1:
 				c, _ := strconv.Atoi(splitTime)
 				t = t.Add(time.Duration(c) * time.Minute)
-				break
 			case 2:
 				if strings.Contains(splitTime, ".") {
 					milliAndSeconds := strings.Split(splitTime, ".")
@@ -653,7 +856,6 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 					c, _ := strconv.Atoi(splitTime)
 					t = t.Add(time.Duration(c) * time.Second)
 				}
-				break
 			}
 		}
 
@@ -755,34 +957,47 @@ func (s *Service) handleEventApproval(ctx context.Context, session *discordgo.Se
 }
 
 func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
-	options := i.ApplicationCommandData().Options[0].Options
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		logger := flume.FromContext(ctx)
+		options := i.ApplicationCommandData().Options[0].Options
 
-	leaderboardName := ""
-	threadName := ""
-	for _, option := range options {
-		switch option.Name {
-		case "leaderboard":
-			leaderboardName = option.Value.(string)
-			break
-		case "thread":
-			threadName = option.Value.(string)
-			break
+		leaderboardName := ""
+		threadName := ""
+		for _, option := range options {
+			switch option.Name {
+			case "leaderboard":
+				leaderboardName = option.Value.(string)
+			case "thread":
+				threadName = option.Value.(string)
+			}
 		}
-	}
 
-	switch leaderboardName {
-	case "Kc":
-		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Updating Leaderboard: " + leaderboardName,
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
-		// If kc is updating, always update all of them
-		s.updateKcHOF(ctx, session)
-	case "Speed":
-		if _, ok := util.HofSpeedCategories[threadName]; ok {
+		switch leaderboardName {
+		case "Kc":
+			logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
+			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Updating Leaderboard: " + leaderboardName,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			// If kc is updating, always update all of them
+			s.updateKcHOF(ctx, session)
+		case "Speed":
+			logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
+			if _, ok := util.HofSpeedCategories[threadName]; ok {
+				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				s.updateSpeedHOF(ctx, session, threadName)
+			}
+		default:
 			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -790,18 +1005,51 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
-			s.updateSpeedHOF(ctx, session, threadName)
 		}
-	default:
-		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		logger := flume.FromContext(ctx)
+		data := i.ApplicationCommandData()
+		var choices []*discordgo.ApplicationCommandOptionChoice
+		switch {
+		case data.Options[0].Options[0].Focused:
+			choices = []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "Kc",
+					Value: "Kc",
+				},
+				{
+					Name:  "Speed",
+					Value: "Speed",
+				},
+			}
+		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+		case data.Options[0].Options[1].Focused:
+			switch data.Options[0].Options[0].Value.(string) {
+			case "Kc":
+				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+					Name:  "All",
+					Value: "All",
+				})
+			case "Speed":
+				for thread, _ := range util.HofSpeedCategories {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  thread,
+						Value: thread,
+					})
+				}
+			}
+		}
+
+		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
-				Flags:   discordgo.MessageFlagsEphemeral,
+				Choices: choices,
 			},
 		})
+		if err != nil {
+			logger.Error("Failed to handle admin autocomplete options: " + err.Error())
+		}
 	}
-
 }
 
 func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
@@ -811,7 +1059,6 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 	switch options[0].Name {
 	case "player":
 		returnMessage = s.handlePlayerAdministration(ctx, session, i)
-		break
 	case "pp-instructions":
 		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -823,7 +1070,6 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		_ = s.updateCpInstructions(ctx, session)
 	case "update-cp":
 		returnMessage = s.updateCpPoints(ctx, session, i)
-		break
 	case "update-leaderboard":
 		s.updateLeaderboard(ctx, session, i)
 		return ""
@@ -874,10 +1120,10 @@ func (s *Service) updateCpInstructions(ctx context.Context, session *discordgo.S
 		"https://i.imgur.com/dZ4auf1.png",
 		"## Additional Fields",
 		"https://i.imgur.com/CSs9vOW.png",
-		"**NOTE: Only 1 or either the screenshot field or imgur_link field is acceptable. Using both will cause and error as well as using none!**",
+		"**NOTE: Only 1 or either the screenshot field or i-imgur-link field is acceptable. Using both will cause and error as well as using none!**",
 		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
 		"https://i.imgur.com/SGvWSt8.png",
-		"### imgur_link\nThis allows you to put in an i.imgur.com url instead of an image upload",
+		"### i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
 		"https://i.imgur.com/TaoiTLG.png",
 		"### speed-time:\nThis is required for speed submissions and must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds",
 		"https://i.imgur.com/Lb7k6uP.png",
