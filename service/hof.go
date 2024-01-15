@@ -81,9 +81,34 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 				placements = placements + podium.Data.Players[k].Username + " [" + strconv.Itoa(podium.Data.Players[k].Kc) + "]\n"
 			}
 
+			// Beautify some names
+			bossName := podium.Data.BossName
+			switch bossName {
+			case "Clue_beginner":
+				bossName = "Beginner Clue"
+			case "Clue_easy":
+				bossName = "Easy Clue"
+			case "Clue_medium":
+				bossName = "Medium Clue"
+			case "Clue_hard":
+				bossName = "Hard Clue"
+			case "Clue_elite":
+				bossName = "Elite Clue"
+			case "Clue_master":
+				bossName = "Master Clue"
+			case "Clue_all":
+				bossName = "All Clues"
+			case "Bounty Hunter Hunter":
+				bossName = "Bounty Hunter - Hunter"
+			case "Bounty Hunter Rogue":
+				bossName = "Bounty Hunter - Rogue"
+			case "Theatre of Blood Challenge Mode":
+				bossName = "Theatre of Blood Hard Mode"
+			}
+
 			// Send the Discord Embed message for the boss podium finish
 			_, err = session.ChannelMessageSendEmbed(requestInfo.DiscChan, embed.NewEmbed().
-				SetTitle(podium.Data.BossName).
+				SetTitle(bossName).
 				SetDescription(placements).
 				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
 			if err != nil {
