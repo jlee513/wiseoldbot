@@ -27,7 +27,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 			logger.Debug("Rejected: Player " + player + " does not exist.")
 			return
 		}
-		s.updateCpLeaderboard(context.Background(), session)
+		s.updatePpLeaderboard(context.Background(), session)
 	} else if strings.Contains(msg, " just received a valuable drop:") {
 		index1 := strings.Index(msg, "drop:")
 		index2 := strings.Index(msg, "!")
@@ -42,7 +42,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 				logger.Debug("Rejected: Player " + player + " does not exist.")
 				return
 			}
-			s.updateCpLeaderboard(context.Background(), session)
+			s.updatePpLeaderboard(context.Background(), session)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return
@@ -61,7 +61,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 				logger.Debug("Rejected: Player " + player + " does not exist.")
 				return
 			}
-			s.updateCpLeaderboard(context.Background(), session)
+			s.updatePpLeaderboard(context.Background(), session)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return

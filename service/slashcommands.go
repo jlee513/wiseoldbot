@@ -139,13 +139,22 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 									Name:  "Remove",
 									Value: "Remove",
 								},
+								{
+									Name:  "Name Change",
+									Value: "Name Change",
+								},
 							},
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "player",
+							Name:        "name",
 							Description: "Player name",
 							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "new-name",
+							Description: "New player name",
 						},
 					},
 				},
@@ -718,7 +727,7 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		}
 
 		// Update the cp leaderboard
-		s.updateCpLeaderboard(ctx, session)
+		s.updatePpLeaderboard(ctx, session)
 
 		// Delete the screenshot in the page
 		err := session.ChannelMessageDelete(s.config.DiscCpApprovalChan, r.MessageID)
@@ -885,7 +894,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			}
 
 			// Update the cp leaderboard
-			s.updateCpLeaderboard(ctx, session)
+			s.updatePpLeaderboard(ctx, session)
 
 			// Update the boss leaderboard that was updated
 			s.updateSpeedHOF(ctx, session, util.SpeedBossNameToCategory[bossName])
@@ -1058,13 +1067,14 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 	}
 }
 
-func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	options := i.ApplicationCommandData().Options
 	returnMessage := ""
 
 	switch options[0].Name {
 	case "player":
 		returnMessage = s.handlePlayerAdministration(ctx, session, i)
+		s.updatePpLeaderboard(ctx, session)
 	case "submission-instructions":
 		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1078,10 +1088,18 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		returnMessage = s.updateCpPoints(ctx, session, i)
 	case "update-leaderboard":
 		s.updateLeaderboard(ctx, session, i)
-		return ""
+		return
 	}
 
-	return returnMessage
+	session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: returnMessage,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+
+	return
 }
 
 func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session) string {
@@ -1257,40 +1275,83 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 	logger := flume.FromContext(ctx)
 	options := i.ApplicationCommandData().Options[0].Options
 
-	option := options[0].Value.(string)
-	player := options[1].Value.(string)
+	option := ""
+	name := ""
+	newName := ""
+
+	for _, iterOption := range options {
+		switch iterOption.Name {
+		case "option":
+			option = iterOption.Value.(string)
+		case "name":
+			name = iterOption.Value.(string)
+		case "new-name":
+			newName = iterOption.Value.(string)
+		}
+	}
 
 	switch option {
 	case "Add":
 		// Ensure that this person does not exist in the cp map currently
-		if _, ok := s.cp[player]; ok {
+		if _, ok := s.cp[name]; ok {
 			// Send the failed addition message in the previously created private channel
-			logger.Error("Member: " + player + " already exists.")
-			msg := "Member: " + player + " already exists."
+			logger.Error("Member: " + name + " already exists.")
+			msg := "Member: " + name + " already exists."
 			return msg
 		} else {
-			s.cp[player] = 0
-			s.temple.AddMemberToTemple(ctx, player, s.config.TempleGroupId, s.config.TempleGroupKey)
+			s.cp[name] = 0
+			s.temple.AddMemberToTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 
-			logger.Debug("You have successfully added a new member: " + player)
-			msg := "You have successfully added a new member: " + player
+			logger.Debug("You have successfully added a new member: " + name)
+			msg := "You have successfully added a new member: " + name
 			return msg
 		}
 	case "Remove":
 		// Remove the user from the temple page
-		s.temple.RemoveMemberFromTemple(ctx, player, s.config.TempleGroupId, s.config.TempleGroupKey)
+		s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 
-		if _, ok := s.cp[player]; ok {
-			delete(s.cp, player)
+		if _, ok := s.cp[name]; ok {
+			delete(s.cp, name)
 
-			logger.Debug("You have successfully removed a member: " + player)
-			msg := "You have successfully removed a member: " + player
+			logger.Debug("You have successfully removed a member: " + name)
+			msg := "You have successfully removed a member: " + name
 			return msg
 
 		} else {
 			// Send the failed removal message in the previously created private channel
-			logger.Error("Member: " + player + " does not exist.")
-			msg := "Member: " + player + " does not exist."
+			logger.Error("Member: " + name + " does not exist.")
+			msg := "Member: " + name + " does not exist."
+			return msg
+		}
+	case "Name Change":
+		// Remove the user from the temple page and add new name
+		s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
+		s.temple.AddMemberToTemple(ctx, newName, s.config.TempleGroupId, s.config.TempleGroupKey)
+
+		// Update HOF Speed times from old name to new name
+		updatedSpeedInfo := make(map[string]util.SpeedInfo)
+		for boss, speedInfo := range s.speed {
+			updatedSpeedInfo[boss] = util.SpeedInfo{
+				PlayersInvolved: strings.Replace(speedInfo.PlayersInvolved, name, newName, -1),
+				Time:            speedInfo.Time,
+				URL:             speedInfo.URL,
+			}
+		}
+		s.speed = updatedSpeedInfo
+
+		if _, ok := s.cp[name]; ok {
+			s.cp[newName] = s.cp[name]
+			delete(s.cp, name)
+
+			logger.Debug("You have successfully changed names from: " + name + " to: " + newName)
+			msg := "You have successfully changed names from: " + name + " to: " + newName
+
+			return msg
+
+		} else {
+			// Send the failed removal message in the previously created private channel
+			logger.Error("Member: " + name + " does not exist.")
+			msg := "Member: " + name + " does not exist."
 			return msg
 		}
 	default:

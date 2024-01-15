@@ -31,7 +31,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	})
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscHOFLeaderboardChan, 50, "", "", "")
+	messages, err := session.ChannelMessages(s.config.DiscHOFLeaderboardChan, 50, "", "1196540272486649988", "")
 	if err != nil {
 		logger.Error("Failed to get all messages for deletion from the leagues podium channel")
 		return
@@ -77,7 +77,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 		"the HOF uses TempleOSRS to get kcs - please turn on the XP Tracker plugin on Runelite and check the TempleOSRS option.\n\n"
 	msg = msg + "3 points for :first_place:\n2 points for :second_place:\n1 points for :third_place:"
 	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
-		SetTitle("How To Get Onto The Collection Log HOF").
+		SetTitle("How To Get Onto The Ponies HOF Leaderboard").
 		SetDescription(msg).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
 	if err != nil {
@@ -85,8 +85,8 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	}
 }
 
-// updateCpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
-func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Session) {
+// updatePpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
+func (s *Service) updatePpLeaderboard(ctx context.Context, session *discordgo.Session) {
 	logger := flume.FromContext(ctx)
 	// Update the #cp-leaderboard
 	keys := make([]string, 0, len(s.cp))
@@ -108,19 +108,19 @@ func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Se
 	}
 
 	// Retrieve the one channel message and delete it in the leaderboard channel
-	messages, err := session.ChannelMessages(s.config.DiscLeaderboardChan, 1, "", "", "")
+	messages, err := session.ChannelMessages(s.config.DiscPPLeaderboardChan, 1, "", "1196540063564177561", "")
 	if err != nil {
 		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
-	err = session.ChannelMessageDelete(s.config.DiscLeaderboardChan, messages[0].ID)
+	err = session.ChannelMessageDelete(s.config.DiscPPLeaderboardChan, messages[0].ID)
 	if err != nil {
 		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 
 	// Send the Discord Embed message
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaderboardChan, embed.NewEmbed().
+	_, err = session.ChannelMessageSendEmbed(s.config.DiscPPLeaderboardChan, embed.NewEmbed().
 		SetTitle("Ponies Points Leaderboard").
 		SetDescription(fmt.Sprintf(leaderboard)).
 		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
@@ -148,7 +148,7 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "", "")
+	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "1196541219581460530", "")
 	if err != nil {
 		logger.Error("Failed to retrieve last 10 messages" + err.Error())
 		return err
@@ -206,7 +206,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	logger.Info("Running leagues hiscores update.")
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "", "")
+	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "1196540715983974531", "")
 	if err != nil {
 		logger.Error("Failed to get all messages for deletion from the leagues podium channel.")
 		return
