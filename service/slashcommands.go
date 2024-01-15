@@ -862,6 +862,12 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		// If the submission time is faster than the current speed time for the boss, update it
 		if t.Before(s.speed[bossName].Time) {
 			logger.Info("NEW TIME FOR BOSS: " + bossName)
+			// Add message into new fastest time channel
+			_, err := session.ChannelMessageSend(s.config.DiscNewFastestTimeChan, fmt.Sprintf("New record for %s has been set!\n%s has beaten %s!\nOld time: %+v\nNew Time: %+v\n%s", bossName, playersInvolved, s.speed[bossName].PlayersInvolved, s.speed[bossName].Time.Format("15:04:05.00"), t.Format("15:04:05.00"), submissionUrl))
+			if err != nil {
+				logger.Error("Failed to send message to cp information channel", err)
+			}
+
 			logger.Info(fmt.Sprintf("Old time: %+v", s.speed[bossName].Time.Format("15:04:05.00")))
 			logger.Info(fmt.Sprintf("New Time: %+v", t.Format("15:04:05.00")))
 			s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl}

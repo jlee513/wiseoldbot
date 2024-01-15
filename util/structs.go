@@ -59,6 +59,7 @@ type Config struct {
 	DiscColChan            string `mapstructure:"DISCORD_COL_CHANNEL"`
 	DiscLeaguesChan        string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	DiscHOFLeaderboardChan string `mapstructure:"DISCORD_HOF_LEADERBOARD_CHANNEL"`
+	DiscNewFastestTimeChan string `mapstructure:"DISCORD_NEW_FASTEST_TIME_CHANNEL"`
 
 	// SPEED
 	DiscSpeedTzhaarChan    string `mapstructure:"DISCORD_SPEED_TZHAAR_CHANNEL"`

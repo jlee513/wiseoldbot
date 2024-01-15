@@ -136,6 +136,7 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.sheets.UpdateFeedbackChannel(ctx, s.feedback)
 
 	// Delete the slash commands the bot creates
+	//session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, "")
 	//s.removeSlashCommands(session)
 
 	// Stop the cron scheduler
