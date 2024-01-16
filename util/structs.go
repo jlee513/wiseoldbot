@@ -27,6 +27,7 @@ type Config struct {
 	SheetsSpeed       string `mapstructure:"SHEETS_SPEED"`
 	SheetsSpeedSC     string `mapstructure:"SHEETS_SPEED_SC"`
 	SheetsFeedback    string `mapstructure:"SHEETS_FEEDBACK"`
+	SheetsTid         string `mapstructure:"SHEETS_TID"`
 	ImgurClientId     string `mapstructure:"IMGUR_CLIENT_ID"`
 	ImgurClientSecret string `mapstructure:"IMGUR_CLIENT_SECRET"`
 	ImgurRefreshToken string `mapstructure:"IMGUR_REFRESH_TOKEN"`

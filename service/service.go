@@ -80,6 +80,7 @@ func (s *Service) StartDiscordIRC() {
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
 	s.sheets.InitializeFeedbackFromSheet(ctx, s.feedback)
+	s.tid = s.sheets.InitializeTIDFromSheet(ctx)
 
 	// Create a new discord session
 	session, err := discordgo.New("Bot " + s.config.DiscBotToken)
@@ -139,6 +140,8 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
 	s.log.Debug("Running feedback sheets updates...")
 	s.sheets.UpdateFeedbackChannel(ctx, s.feedback)
+	s.log.Debug("Running tid sheets updates...")
+	s.sheets.UpdateTIDFromSheet(ctx, s.tid)
 	s.log.Debug("Finished running sheets updates")
 
 	// Delete the slash commands the bot creates

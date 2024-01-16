@@ -1032,6 +1032,15 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 					},
 				})
 				s.updateSpeedHOF(ctx, session, threadName)
+			} else if strings.Compare(threadName, "All") == 0 {
+				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Updating All Speed Leaderboards",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility")
 			}
 		default:
 			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -1073,6 +1082,10 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 						Value: thread,
 					})
 				}
+				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+					Name:  "All",
+					Value: "All",
+				})
 			}
 		}
 

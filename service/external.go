@@ -21,6 +21,8 @@ type sheets interface {
 	InitializeCpFromSheet(ctx context.Context, cp map[string]int)
 	InitializeSpeedsFromSheet(ctx context.Context, speed map[string]util.SpeedInfo)
 	InitializeFeedbackFromSheet(ctx context.Context, feedback map[string]string)
+	InitializeTIDFromSheet(ctx context.Context) int
+	UpdateTIDFromSheet(ctx context.Context, tid int)
 	UpdateCpSheet(ctx context.Context, cp map[string]int)
 	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string)
 	UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo)

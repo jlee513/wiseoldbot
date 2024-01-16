@@ -21,9 +21,10 @@ type GoogleSheetsClient struct {
 	cpScSheet    string
 	speedSheet   string
 	speedScSheet string
+	tidSheet     string
 }
 
-func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, feedback string) *GoogleSheetsClient {
+func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, feedback string, tidSheet string) *GoogleSheetsClient {
 	client := new(GoogleSheetsClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.cpSheet = cpSheet
@@ -31,6 +32,7 @@ func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, 
 	client.speedSheet = speedSheet
 	client.speedScSheet = speedScSheet
 	client.feedback = feedback
+	client.tidSheet = tidSheet
 	return client
 }
 
@@ -136,7 +138,7 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 					c, _ := strconv.Atoi(milliAndSeconds[0])
 					c2, _ := strconv.Atoi(milliAndSeconds[1])
 					t = t.Add(time.Duration(c) * time.Second)
-					t = t.Add(time.Duration(c2) * time.Millisecond)
+					t = t.Add(time.Duration(c2) * time.Millisecond * 10)
 				} else {
 					c, _ := strconv.Atoi(splitTime)
 					t = t.Add(time.Duration(c) * time.Second)
@@ -173,6 +175,20 @@ func (g GoogleSheetsClient) InitializeFeedbackFromSheet(ctx context.Context, fee
 		}
 		feedback[player] = channel
 	}
+}
+
+func (g GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
+	sheet := g.prepGoogleSheet(g.tidSheet)
+	tid, _ := strconv.Atoi(sheet.Rows[0][0].Value)
+	return tid
+}
+
+func (g GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
+	sheet := g.prepGoogleSheet(g.tidSheet)
+	sheet.Update(0, 0, strconv.Itoa(tid))
+	// Make sure call Synchronize to reflect the changes
+	err := sheet.Synchronize()
+	checkError(err)
 }
 
 /*
