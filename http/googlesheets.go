@@ -16,23 +16,23 @@ import (
 
 type GoogleSheetsClient struct {
 	client       *http.Client
-	feedback     string
 	cpSheet      string
 	cpScSheet    string
 	speedSheet   string
 	speedScSheet string
 	tidSheet     string
+	members      string
 }
 
-func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, feedback string, tidSheet string) *GoogleSheetsClient {
+func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, tidSheet string, members string) *GoogleSheetsClient {
 	client := new(GoogleSheetsClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.cpSheet = cpSheet
 	client.cpScSheet = cpScSheet
 	client.speedSheet = speedSheet
 	client.speedScSheet = speedScSheet
-	client.feedback = feedback
 	client.tidSheet = tidSheet
+	client.members = members
 	return client
 }
 
@@ -150,10 +150,19 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 	}
 }
 
-func (g GoogleSheetsClient) InitializeFeedbackFromSheet(ctx context.Context, feedback map[string]string) {
-	sheet := g.prepGoogleSheet(g.feedback)
+func (g GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
+	sheet := g.prepGoogleSheet(g.tidSheet)
+	tid, _ := strconv.Atoi(sheet.Rows[0][0].Value)
+	return tid
+}
+
+func (g GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo) {
+	sheet := g.prepGoogleSheet(g.members)
 
 	header := true
+
+	missingFeedback := make(map[string]string)
+	foundFeedback := make(map[string]string)
 
 	// Set the in memory cp map with the Google sheets information
 	for _, row := range sheet.Rows {
@@ -161,41 +170,48 @@ func (g GoogleSheetsClient) InitializeFeedbackFromSheet(ctx context.Context, fee
 			header = false
 			continue
 		}
-		isPlayer := true
 		player := ""
-		channel := ""
-		for _, cell := range row {
-			if isPlayer {
+		id := ""
+		discordName := ""
+		feedback := ""
+		for col, cell := range row {
+			switch col {
+			case 0:
 				player = cell.Value
-			} else {
-				channel = strings.Replace(cell.Value, "ponies", "", -1)
-				break
+			case 1:
+				id = strings.Replace(cell.Value, "ponies", "", -1)
+			case 2:
+				discordName = cell.Value
+			case 3:
+				feedback = strings.Replace(cell.Value, "ponies", "", -1)
+				if len(feedback) == 0 {
+					missingFeedback[discordName] = player
+				} else {
+					foundFeedback[discordName] = feedback
+				}
 			}
-			isPlayer = false
 		}
-		feedback[player] = channel
+		members[player] = util.MemberInfo{
+			DiscordId:   id,
+			DiscordName: discordName,
+			Feedback:    feedback,
+		}
+	}
+
+	// If there are entries in the ponies members sheets that don't have feedback entries, check the ones that found the
+	// entries and set it (this is for alts)
+	for discordName, player := range missingFeedback {
+		if _, ok := foundFeedback[discordName]; ok {
+			members[player] = util.MemberInfo{
+				DiscordId:   members[player].DiscordId,
+				DiscordName: members[player].DiscordName,
+				Feedback:    foundFeedback[discordName],
+			}
+		}
 	}
 }
-
-func (g GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
-	sheet := g.prepGoogleSheet(g.tidSheet)
-	tid, _ := strconv.Atoi(sheet.Rows[0][0].Value)
-	return tid
-}
-
-func (g GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
-	sheet := g.prepGoogleSheet(g.tidSheet)
-	sheet.Update(0, 0, strconv.Itoa(tid))
-	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
-	checkError(err)
-}
-
-/*
-UpdateFeedbackChannel will take the feedback map that was being locally updated and save it to the Google Sheets
-*/
-func (g GoogleSheetsClient) UpdateFeedbackChannel(ctx context.Context, feedback map[string]string) {
-	sheet := g.prepGoogleSheet(g.feedback)
+func (g GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo) {
+	sheet := g.prepGoogleSheet(g.members)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
@@ -204,12 +220,22 @@ func (g GoogleSheetsClient) UpdateFeedbackChannel(ctx context.Context, feedback 
 	// Update the Google sheets information with the in memory cp map
 	row := 1
 
-	for user, channelId := range feedback {
+	for user, memberInfo := range members {
 		sheet.Update(row, 0, user)
-		sheet.Update(row, 1, "ponies"+channelId)
+		sheet.Update(row, 1, "ponies"+memberInfo.DiscordId)
+		sheet.Update(row, 2, memberInfo.DiscordName)
+		sheet.Update(row, 3, "ponies"+memberInfo.Feedback)
 		row++
 	}
 
+	// Make sure call Synchronize to reflect the changes
+	err := sheet.Synchronize()
+	checkError(err)
+}
+
+func (g GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
+	sheet := g.prepGoogleSheet(g.tidSheet)
+	sheet.Update(0, 0, strconv.Itoa(tid))
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
 	checkError(err)

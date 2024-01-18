@@ -26,8 +26,8 @@ type Config struct {
 	SheetsCpSC        string `mapstructure:"SHEETS_CP_SC"`
 	SheetsSpeed       string `mapstructure:"SHEETS_SPEED"`
 	SheetsSpeedSC     string `mapstructure:"SHEETS_SPEED_SC"`
-	SheetsFeedback    string `mapstructure:"SHEETS_FEEDBACK"`
 	SheetsTid         string `mapstructure:"SHEETS_TID"`
+	SheetsMembers     string `mapstructure:"SHEETS_MEMBERS"`
 	ImgurClientId     string `mapstructure:"IMGUR_CLIENT_ID"`
 	ImgurClientSecret string `mapstructure:"IMGUR_CLIENT_SECRET"`
 	ImgurRefreshToken string `mapstructure:"IMGUR_REFRESH_TOKEN"`
@@ -75,6 +75,12 @@ type Config struct {
 	DiscSpeedTOBHMChan     string `mapstructure:"DISCORD_SPEED_TOB_HM_CHANNEL"`
 	DiscSpeedTOAEChan      string `mapstructure:"DISCORD_SPEED_TOA_E_CHANNEL"`
 	DiscSpeedAgilityChan   string `mapstructure:"DISCORD_SPEED_AGILITY_CHANNEL"`
+}
+
+type MemberInfo struct {
+	DiscordId   string `json:"discordId"`
+	DiscordName string `json:"discordName"`
+	Feedback    string `json:"feedback"`
 }
 
 type SpeedInfo struct {

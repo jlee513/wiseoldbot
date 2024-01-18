@@ -20,14 +20,14 @@ type collectionLog interface {
 type sheets interface {
 	InitializeCpFromSheet(ctx context.Context, cp map[string]int)
 	InitializeSpeedsFromSheet(ctx context.Context, speed map[string]util.SpeedInfo)
-	InitializeFeedbackFromSheet(ctx context.Context, feedback map[string]string)
 	InitializeTIDFromSheet(ctx context.Context) int
+	InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo)
+	UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo)
 	UpdateTIDFromSheet(ctx context.Context, tid int)
 	UpdateCpSheet(ctx context.Context, cp map[string]int)
 	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string)
 	UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo)
 	UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo)
-	UpdateFeedbackChannel(ctx context.Context, feedback map[string]string)
 }
 
 type temple interface {
