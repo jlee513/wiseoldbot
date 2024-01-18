@@ -29,8 +29,7 @@ type Service struct {
 	speedscreenshots map[string]util.SpeedScInfo
 	log              flume.Logger
 	tid              int
-
-	feedback map[string]string
+	members          map[string]util.MemberInfo
 
 	registeredCommands []*discordgo.ApplicationCommand
 
@@ -63,8 +62,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		speedscreenshots: make(map[string]util.SpeedScInfo),
 		log:              logger,
 		tid:              1,
-
-		feedback: make(map[string]string),
+		members:          make(map[string]util.MemberInfo),
 
 		config: config,
 		client: client,
@@ -79,7 +77,7 @@ func (s *Service) StartDiscordIRC() {
 	ctx := context.Background()
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
-	s.sheets.InitializeFeedbackFromSheet(ctx, s.feedback)
+	s.sheets.InitializeMembersFromSheet(ctx, s.members)
 	s.tid = s.sheets.InitializeTIDFromSheet(ctx)
 
 	// Create a new discord session
@@ -129,6 +127,17 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	)
 	<-sigchan
 
+	s.updateAllGoogleSheets(ctx)
+
+	// Delete the slash commands the bot creates
+	//session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, "")
+	//s.removeSlashCommands(session)
+
+	// Stop the cron scheduler
+	s.scheduler.Stop()
+}
+
+func (s *Service) updateAllGoogleSheets(ctx context.Context) {
 	// Once the program is interrupted, update the Google Sheet clan points & screenshot sheets
 	s.log.Debug("Running cp sheets updates...")
 	s.sheets.UpdateCpSheet(ctx, s.cp)
@@ -138,18 +147,11 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.sheets.UpdateSpeedSheet(ctx, s.speed)
 	s.log.Debug("Running speed sc sheets updates...")
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
-	s.log.Debug("Running feedback sheets updates...")
-	s.sheets.UpdateFeedbackChannel(ctx, s.feedback)
 	s.log.Debug("Running tid sheets updates...")
 	s.sheets.UpdateTIDFromSheet(ctx, s.tid)
+	s.log.Debug("Running members sheets updates...")
+	s.sheets.UpdateMembersSheet(ctx, s.members)
 	s.log.Debug("Finished running sheets updates")
-
-	// Delete the slash commands the bot creates
-	//session.ApplicationCommandDelete(session.State.User.ID, s.config.DiscGuildId, "")
-	//s.removeSlashCommands(session)
-
-	// Stop the cron scheduler
-	s.scheduler.Stop()
 }
 
 // initCron will instantiate the HallOfFameRequestInfos and kick off the cron job
@@ -162,7 +164,8 @@ func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 		s.updateKcHOF(ctx, session)
 		s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Theatre Of Blood", "Tombs Of Amascut", "Agility")
 		s.updateColLog(ctx, session)
-		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Leagues!")
+		s.updateAllGoogleSheets(ctx)
+		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Google Sheets!")
 	})
 	if err != nil {
 		// handle the error related to setting up the job

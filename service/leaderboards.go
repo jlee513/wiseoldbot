@@ -6,9 +6,120 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
+	"osrs-disc-bot/util"
 	"sort"
 	"strconv"
+	"strings"
 )
+
+func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		logger := flume.FromContext(ctx)
+		options := i.ApplicationCommandData().Options[0].Options
+
+		leaderboardName := ""
+		threadName := ""
+		for _, option := range options {
+			switch option.Name {
+			case "leaderboard":
+				leaderboardName = option.Value.(string)
+			case "thread":
+				threadName = option.Value.(string)
+			}
+		}
+
+		switch leaderboardName {
+		case "Kc":
+			logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
+			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Updating Leaderboard: " + leaderboardName,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			// If kc is updating, always update all of them
+			s.updateKcHOF(ctx, session)
+		case "Speed":
+			logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
+			if _, ok := util.HofSpeedCategories[threadName]; ok {
+				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				s.updateSpeedHOF(ctx, session, threadName)
+			} else if strings.Compare(threadName, "All") == 0 {
+				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Updating All Speed Leaderboards",
+						Flags:   discordgo.MessageFlagsEphemeral,
+					},
+				})
+				s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility")
+			}
+		default:
+			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		logger := flume.FromContext(ctx)
+		data := i.ApplicationCommandData()
+		var choices []*discordgo.ApplicationCommandOptionChoice
+		switch {
+		case data.Options[0].Options[0].Focused:
+			choices = []*discordgo.ApplicationCommandOptionChoice{
+				{
+					Name:  "Kc",
+					Value: "Kc",
+				},
+				{
+					Name:  "Speed",
+					Value: "Speed",
+				},
+			}
+		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+		case data.Options[0].Options[1].Focused:
+			switch data.Options[0].Options[0].Value.(string) {
+			case "Kc":
+				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+					Name:  "All",
+					Value: "All",
+				})
+			case "Speed":
+				for thread, _ := range util.HofSpeedCategories {
+					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+						Name:  thread,
+						Value: thread,
+					})
+				}
+				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+					Name:  "All",
+					Value: "All",
+				})
+			}
+		}
+
+		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
+		if err != nil {
+			logger.Error("Failed to handle admin autocomplete options: " + err.Error())
+		}
+	}
+}
 
 func (s *Service) addToHOFLeaderboard(hofLeaderboard map[string]int, player string, points int) {
 	if _, ok := hofLeaderboard[player]; ok {

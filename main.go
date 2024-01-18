@@ -12,7 +12,7 @@ func main() {
 
 	// Initialize the clients that make external calls
 	collectionLog := http.NewCollectionLogClient()
-	sheets := http.NewGoogleSheetsClient(cfg.SheetsCp, cfg.SheetsCpSC, cfg.SheetsSpeed, cfg.SheetsSpeedSC, cfg.SheetsFeedback, cfg.SheetsTid)
+	sheets := http.NewGoogleSheetsClient(cfg.SheetsCp, cfg.SheetsCpSC, cfg.SheetsSpeed, cfg.SheetsSpeedSC, cfg.SheetsTid, cfg.SheetsMembers)
 	imgur := http.NewImgurClient()
 	temple := http.NewTempleClient()
 	runescape := http.NewRunescapeClient()

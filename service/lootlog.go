@@ -98,6 +98,13 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 		}
 	}
 	submissionUrl := s.imgur.Upload(context.Background(), accessToken, resp.Body)
-	logger.Info("Successfully uploaded imgur url: " + submissionUrl)
+	logger.Info("Successfully uploaded lootlog imgur url: " + submissionUrl)
+
+	channel := s.checkOrCreateFeedbackChannel(ctx, session, "", "", player)
+	feedBackMsg := "<@" + s.members[player].DiscordId + ">\nYour automatic loot log ponies point has been accepted\n\n" + message.Content
+	_, err = session.ChannelMessageSend(channel, feedBackMsg)
+	if err != nil {
+		logger.Error("Failed to send message to cp information channel", err)
+	}
 	s.cpscreenshots[submissionUrl] = player
 }
