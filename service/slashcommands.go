@@ -164,7 +164,7 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "submission-instructions",
+					Name:        "update-instructions",
 					Description: "Update Submission instructions",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
@@ -177,12 +177,6 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 							Type:        discordgo.ApplicationCommandOptionString,
 							Name:        "player",
 							Description: "Player name",
-							Required:    true,
-						},
-						{
-							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "amount-of-pp",
-							Description: "Amount of Pp to manage for player",
 							Required:    true,
 						},
 						{
@@ -201,11 +195,17 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 								},
 							},
 						},
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "amount-of-pp",
+							Description: "Amount of Pp to manage for player",
+							Required:    true,
+						},
 					},
 				},
 				{
-					Name:        "update-speed",
-					Description: "Update Speed times",
+					Name:        "reset-speed",
+					Description: "Reset Speed times",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
@@ -245,6 +245,11 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 						},
 					},
 				},
+				{
+					Name:        "update-sheets",
+					Description: "Update google sheets",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
 			},
 		},
 	}
@@ -276,35 +281,33 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 //}
 
 func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.InteractionCreate) {
-	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
-	logger := flume.FromContext(ctx)
-	defer func() { s.tid++ }()
-
-	returnMessage := ""
 
 	switch i.ApplicationCommandData().Name {
 	case "pp-submission":
-		returnMessage = s.handlePPSubmission(ctx, session, i)
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		defer func() { s.tid++ }()
+		returnMessage := s.handlePPSubmission(ctx, session, i)
+		err := util.InteractionRespond(session, i, returnMessage)
+		if err != nil {
+			s.log.Error("Failed to send interaction response: " + err.Error())
+		}
 	case "guide":
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		defer func() { s.tid++ }()
 		s.handleGuideAdministrationSubmission(ctx, session, i)
 		return
 	case "admin":
-		s.handleAdmin(ctx, session, i)
+		s.handleAdmin(session, i)
 		return
 	case "speed-submission":
-		returnMessage = s.handleSpeedSubmission(ctx, session, i)
+		s.handleSpeedSubmission(session, i)
 	default:
-		logger.Error("ERROR: UNKNOWN COMMAND USED: " + i.ApplicationCommandData().Name)
-		returnMessage = "Error: Unknown Command Used"
+		s.log.Error("ERROR: UNKNOWN COMMAND USED: " + i.ApplicationCommandData().Name)
+		err := util.InteractionRespond(session, i, "Error - Unknown command used: "+i.ApplicationCommandData().Name)
+		if err != nil {
+			s.log.Error("Failed to send interaction response: " + err.Error())
+		}
 	}
-
-	session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: returnMessage,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
 }
 
 func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.MessageReactionAdd) {
@@ -314,15 +317,18 @@ func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.Me
 		return
 	}
 
-	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
-	defer func() { s.tid++ }()
-
 	switch r.ChannelID {
 	case s.config.DiscCpApprovalChan:
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
+		defer func() { s.tid++ }()
 		s.handlePPApproval(ctx, session, r)
 	case s.config.DiscSpeedApprovalChan:
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
+		defer func() { s.tid++ }()
 		s.handleSpeedApproval(ctx, session, r)
 	case s.config.DiscEventApprovalChan:
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
+		defer func() { s.tid++ }()
 		s.handleEventApproval(ctx, session, r)
 	}
 }

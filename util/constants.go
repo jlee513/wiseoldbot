@@ -1,5 +1,9 @@
 package util
 
+import "github.com/bwmarrin/discordgo"
+
+// ******************************** KC HOF ********************************
+
 var HofSlayerBosses = []BossInfo{
 	{BossName: "sire", ImageLink: "https://i.imgur.com/GhbmqEB.png"},
 	{BossName: "hydra", ImageLink: "https://i.imgur.com/25GU0Ph.png"},
@@ -97,8 +101,10 @@ var HofCluesBosses = []BossInfo{
 	{BossName: "clueall", ImageLink: "https://i.imgur.com/wX3Ei7U.png"},
 }
 
+// ******************************** SPEED HOF ********************************
+
 var HofSpeedCategories = map[string]struct{}{
-	"TzHaar": {}, "Slayer": {}, "Nightmare": {}, "Nex": {}, "Solo Bosses": {}, "Chambers Of Xeric": {}, "Chambers Of Xeric Challenge Mode": {}, "Theatre Of Blood": {}, "Theatre Of Blood Hard Mode": {}, "Tombs Of Amascut": {}, "Tombs Of Amascut Expert": {}, "Agility": {},
+	"TzHaar": {}, "Slayer": {}, "Nightmare": {}, "Nex": {}, "Solo Bosses": {}, "Chambers Of Xeric": {}, "Chambers Of Xeric Challenge Mode": {}, "Theatre Of Blood": {}, "Theatre Of Blood Hard Mode": {}, "Tombs Of Amascut": {}, "Tombs Of Amascut Expert": {}, "Agility": {}, "Desert Treasure 2": {},
 }
 
 var SpeedBossNameToCategory = map[string]string{
@@ -192,6 +198,17 @@ var SpeedBossNameToCategory = map[string]string{
 	"Tombs of Amascut Expert Overall 8":       "Tombs Of Amascut Expert",
 	"Hallowed Sepulchre":                      "Agility",
 	"Prifddinas Agility Course":               "Agility",
+	"Duke Sucellus":                           "Desert Treasure 2",
+	"The Leviathan":                           "Desert Treasure 2",
+	"The Whisperer":                           "Desert Treasure 2",
+	"Vardorvis":                               "Desert Treasure 2",
+}
+
+var HofSpeedDt2 = []BossInfo{
+	{BossName: "Duke Sucellus"},
+	{BossName: "The Leviathan"},
+	{BossName: "The Whisperer"},
+	{BossName: "Vardorvis"},
 }
 
 var HofSpeedTzhaar = []BossInfo{
@@ -319,6 +336,55 @@ var HofSpeedAgility = []BossInfo{
 	{BossName: "Hallowed Sepulchre"},
 	{BossName: "Prifddinas Agility Course"},
 }
+
+var SpeedAutocompleteCategories = []*discordgo.ApplicationCommandOptionChoice{
+	{
+		Name:  "TzHaar",
+		Value: "TzHaar",
+	},
+	{
+		Name:  "Chambers Of Xeric",
+		Value: "Chambers Of Xeric",
+	},
+	{
+		Name:  "Chambers Of Xeric Challenge Mode",
+		Value: "Chambers Of Xeric Challenge Mode",
+	},
+	{
+		Name:  "Nightmare",
+		Value: "Nightmare",
+	},
+	{
+		Name:  "Theatre Of Blood Hard Mode",
+		Value: "Theatre Of Blood Hard Mode",
+	},
+	{
+		Name:  "Agility",
+		Value: "Agility",
+	},
+	{
+		Name:  "Tombs Of Amascut Expert",
+		Value: "Tombs Of Amascut Expert",
+	},
+	{
+		Name:  "Solo Bosses",
+		Value: "Solo Bosses",
+	},
+	{
+		Name:  "Nex",
+		Value: "Nex",
+	},
+	{
+		Name:  "Slayer",
+		Value: "Slayer",
+	},
+	{
+		Name:  "Desert Treasure 2",
+		Value: "Desert Treasure 2",
+	},
+}
+
+// ******************************** LOOT LOG INFO ********************************
 
 var LootLogClanPoint = map[string]string{
 
