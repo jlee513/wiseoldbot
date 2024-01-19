@@ -6,6 +6,7 @@ import (
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -25,8 +26,8 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		}
 		_ = s.updateSubmissionInstructions(ctx, session)
 		return
-	case "update-cp":
-		returnMessage = s.updateCpPoints(ctx, session, i)
+	case "update-points":
+		returnMessage = s.updatePPPoints(ctx, session, i)
 	case "reset-speed":
 		returnMessage = s.resetSpeedAdmin(ctx, session, i)
 	case "update-leaderboard":
@@ -367,7 +368,39 @@ func (s *Service) handleGuideAdministrationSubmission(ctx context.Context, sessi
 	}
 }
 
-func (s *Service) updateCpPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
-	// options := i.ApplicationCommandData().Options[0].Options
-	return "Will do eventually"
+func (s *Service) updatePPPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	options := i.ApplicationCommandData().Options[0].Options
+	logger := flume.FromContext(ctx)
+
+	player := ""
+	pp := 0
+	addOrRemove := ""
+
+	for _, option := range options {
+		switch option.Name {
+		case "player":
+			player = option.Value.(string)
+		case "amount-of-pp":
+			pp = int(option.Value.(float64))
+		case "option":
+			addOrRemove = option.Value.(string)
+		}
+	}
+
+	switch addOrRemove {
+	case "Add":
+		logger.Info("Adding " + strconv.Itoa(pp) + " ponies point(s) to " + player)
+		s.cp[player] += pp
+	case "Remove":
+		logger.Info("Removing " + strconv.Itoa(pp) + " ponies point(s) to " + player)
+		if s.cp[player]-pp < 0 {
+			s.cp[player] = 0
+		} else {
+			s.cp[player] -= pp
+		}
+	}
+
+	s.updatePpLeaderboard(ctx, session)
+
+	return "Successfully managed pp for " + player
 }

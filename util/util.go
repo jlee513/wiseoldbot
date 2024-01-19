@@ -144,6 +144,9 @@ func WhiteStripCommas(msg string) string {
 }
 
 func InteractionRespond(session *discordgo.Session, i *discordgo.InteractionCreate, content string) error {
+	if len(content) == 0 {
+		content = "Generic response message"
+	}
 	return session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
