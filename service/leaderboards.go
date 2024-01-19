@@ -10,96 +10,105 @@ import (
 	"strings"
 )
 
-func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
+func (s *Service) updateLeaderboard(session *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
-		logger := flume.FromContext(ctx)
-		options := i.ApplicationCommandData().Options[0].Options
-
-		leaderboardName := ""
-		threadName := ""
-		for _, option := range options {
-			switch option.Name {
-			case "leaderboard":
-				leaderboardName = option.Value.(string)
-			case "thread":
-				threadName = option.Value.(string)
-			}
-		}
-
-		switch leaderboardName {
-		case "Kc":
-			logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
-			err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName)
-			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
-			}
-			// If kc is updating, always update all of them
-			s.updateKcHOF(ctx, session)
-		case "Speed":
-			logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
-			if _, ok := util.HofSpeedCategories[threadName]; ok {
-				err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName+" thread: "+threadName)
-				if err != nil {
-					logger.Error("Failed to send interaction response: " + err.Error())
-				}
-				s.updateSpeedHOF(ctx, session, threadName)
-			} else if strings.Compare(threadName, "All") == 0 {
-				err := util.InteractionRespond(session, i, "Updating All Speed Leaderboards")
-				if err != nil {
-					logger.Error("Failed to send interaction response: " + err.Error())
-				}
-				s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
-			}
-		default:
-			err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
-			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
-			}
-			logger.Error("Unknown leaderboard submitted - please submit a proper leaderboard name")
-		}
+		s.updateLeaderboardCommand(session, i)
 	case discordgo.InteractionApplicationCommandAutocomplete:
-		logger := flume.FromContext(ctx)
-		data := i.ApplicationCommandData()
-		var choices []*discordgo.ApplicationCommandOptionChoice
-		switch {
-		case data.Options[0].Options[0].Focused:
-			choices = []*discordgo.ApplicationCommandOptionChoice{
-				{
-					Name:  "Kc",
-					Value: "Kc",
-				},
-				{
-					Name:  "Speed",
-					Value: "Speed",
-				},
-			}
-		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
-		case data.Options[0].Options[1].Focused:
-			switch data.Options[0].Options[0].Value.(string) {
-			case "Kc":
-				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-					Name:  "All",
-					Value: "All",
-				})
-			case "Speed":
-				for thread, _ := range util.HofSpeedCategories {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  thread,
-						Value: thread,
-					})
-				}
-				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-					Name:  "All",
-					Value: "All",
-				})
-			}
-		}
+		s.updateLeaderboardAutocomplete(session, i)
+	}
+}
 
-		err := util.InteractionRespondChoices(session, i, choices)
-		if err != nil {
-			logger.Error("Failed to handle admin autocomplete options: " + err.Error())
+func (s *Service) updateLeaderboardCommand(session *discordgo.Session, i *discordgo.InteractionCreate) {
+	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+	defer func() { s.tid++ }()
+	logger := flume.FromContext(ctx)
+	options := i.ApplicationCommandData().Options[0].Options
+
+	leaderboardName := ""
+	threadName := ""
+	for _, option := range options {
+		switch option.Name {
+		case "leaderboard":
+			leaderboardName = option.Value.(string)
+		case "thread":
+			threadName = option.Value.(string)
 		}
+	}
+
+	switch leaderboardName {
+	case "Kc":
+		logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
+		err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName)
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
+		// If kc is updating, always update all of them
+		s.updateKcHOF(ctx, session)
+	case "Speed":
+		logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
+		if _, ok := util.HofSpeedCategories[threadName]; ok {
+			err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName+" thread: "+threadName)
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
+			s.updateSpeedHOF(ctx, session, threadName)
+		} else if strings.Compare(threadName, "All") == 0 {
+			err := util.InteractionRespond(session, i, "Updating All Speed Leaderboards")
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
+			s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
+		}
+	default:
+		err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
+		logger.Error("Unknown leaderboard submitted - please submit a proper leaderboard name")
+	}
+}
+
+func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+	var choices []*discordgo.ApplicationCommandOptionChoice
+	switch {
+	case data.Options[0].Options[0].Focused:
+		choices = []*discordgo.ApplicationCommandOptionChoice{
+			{
+				Name:  "Kc",
+				Value: "Kc",
+			},
+			{
+				Name:  "Speed",
+				Value: "Speed",
+			},
+		}
+	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+	case data.Options[0].Options[1].Focused:
+		switch data.Options[0].Options[0].Value.(string) {
+		case "Kc":
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  "All",
+				Value: "All",
+			})
+		case "Speed":
+			for thread, _ := range util.HofSpeedCategories {
+				choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+					Name:  thread,
+					Value: thread,
+				})
+			}
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  "All",
+				Value: "All",
+			})
+		}
+	}
+
+	err := util.InteractionRespondChoices(session, i, choices)
+	if err != nil {
+		s.log.Error("Failed to handle admin autocomplete options: " + err.Error())
 	}
 }
 

@@ -10,16 +10,23 @@ import (
 	"strings"
 )
 
-func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
-	logger := flume.FromContext(ctx)
+func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.InteractionCreate) {
 	options := i.ApplicationCommandData().Options
-	returnMessage := ""
 
 	switch options[0].Name {
 	case "player":
-		returnMessage = s.handlePlayerAdministration(ctx, session, i)
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		defer func() { s.tid++ }()
+		returnMessage := s.handlePlayerAdministration(ctx, session, i)
+		err := util.InteractionRespond(session, i, returnMessage)
+		if err != nil {
+			s.log.Error("Failed to send admin interaction response: " + err.Error())
+		}
 		s.updatePpLeaderboard(ctx, session)
-	case "submission-instructions":
+	case "update-instructions":
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		logger := flume.FromContext(ctx)
+		defer func() { s.tid++ }()
 		err := util.InteractionRespond(session, i, "Updating Ponies Point Instructions")
 		if err != nil {
 			logger.Error("Failed to send interaction response: " + err.Error())
@@ -27,78 +34,96 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		_ = s.updateSubmissionInstructions(ctx, session)
 		return
 	case "update-points":
-		returnMessage = s.updatePPPoints(ctx, session, i)
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		logger := flume.FromContext(ctx)
+		defer func() { s.tid++ }()
+		returnMessage := s.updatePPPoints(ctx, session, i)
+		err := util.InteractionRespond(session, i, returnMessage)
+		if err != nil {
+			logger.Error("Failed to send admin interaction response: " + err.Error())
+		}
 	case "reset-speed":
-		returnMessage = s.resetSpeedAdmin(ctx, session, i)
+		s.resetSpeedAdmin(session, i)
 	case "update-leaderboard":
-		s.updateLeaderboard(ctx, session, i)
+		s.updateLeaderboard(session, i)
 	case "update-sheets":
 		err := util.InteractionRespond(session, i, "Updating Google Sheets")
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			s.log.Error("Failed to send interaction response: " + err.Error())
 		}
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		defer func() { s.tid++ }()
+		s.updateAllGoogleSheets(ctx)
 		return
-	}
-
-	err := util.InteractionRespond(session, i, returnMessage)
-	if err != nil {
-		logger.Error("Failed to send admin interaction response: " + err.Error())
 	}
 
 	return
 }
 
-func (s *Service) resetSpeedAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) resetSpeedAdmin(session *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
-		options := i.ApplicationCommandData().Options[0].Options
-
-		category := ""
-		boss := ""
-
-		for _, option := range options {
-			switch option.Name {
-			case "category":
-				category = option.Value.(string)
-			case "boss":
-				boss = option.Value.(string)
-			}
-		}
-
-		logger.Info("Resetting speed for: " + boss)
-
-		// Ensure the boss name is okay
-		if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
-			logger.Error("Incorrect boss name: ", boss)
-			return "Incorrect boss name. Please look ensure to select one of the options for boss names."
-		}
-
-		// Convert the time string into time
-		t := util.CalculateTime("22:22:22.60")
-		s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
-		s.updateSpeedHOF(ctx, session, category)
-
-		// If nothing wrong happened, send a happy message back to the submitter
-		return "Successfully reset speed for " + boss + "!"
-	case discordgo.InteractionApplicationCommandAutocomplete:
-		logger := flume.FromContext(ctx)
-		data := i.ApplicationCommandData().Options[0]
-		var choices []*discordgo.ApplicationCommandOptionChoice
-		switch {
-		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
-		case data.Options[0].Focused:
-			choices = util.SpeedAutocompleteCategories
-		case data.Options[1].Focused:
-			choices = util.AppendToHofSpeedArr(data.Options[0].Value.(string))
-		}
-
-		err := util.InteractionRespondChoices(session, i, choices)
+		defer func() { s.tid++ }()
+		returnMessage := s.resetSpeedAdminCommand(ctx, session, i)
+		err := util.InteractionRespond(session, i, returnMessage)
 		if err != nil {
-			logger.Error("Failed to handle speed autocomplete: " + err.Error())
+			logger.Error("Failed to send admin interaction response: " + err.Error())
+		}
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		s.resetSpeedAdminAutocomplete(session, i)
+	}
+}
+
+func (s *Service) resetSpeedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+	options := i.ApplicationCommandData().Options[0].Options
+	logger := flume.FromContext(ctx)
+
+	category := ""
+	boss := ""
+
+	for _, option := range options {
+		switch option.Name {
+		case "category":
+			category = option.Value.(string)
+		case "boss":
+			boss = option.Value.(string)
 		}
 	}
-	return ""
+
+	logger.Info("Resetting speed for: " + boss)
+
+	// Ensure the boss name is okay
+	if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
+		logger.Error("Incorrect boss name: ", boss)
+		return "Incorrect boss name. Please look ensure to select one of the options for boss names."
+	}
+
+	// Convert the time string into time
+	t := util.CalculateTime("22:22:22.60")
+	s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
+	s.updateSpeedHOF(ctx, session, category)
+
+	// If nothing wrong happened, send a happy message back to the submitter
+	return "Successfully reset speed for " + boss + "!"
+}
+
+func (s *Service) resetSpeedAdminAutocomplete(session *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData().Options[0]
+	var choices []*discordgo.ApplicationCommandOptionChoice
+	switch {
+	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
+	case data.Options[0].Focused:
+		choices = util.SpeedAutocompleteCategories
+	case data.Options[1].Focused:
+		choices = util.AppendToHofSpeedArr(data.Options[0].Value.(string))
+	}
+
+	err := util.InteractionRespondChoices(session, i, choices)
+	if err != nil {
+		s.log.Error("Failed to handle speed autocomplete: " + err.Error())
+	}
 }
 
 func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session) string {

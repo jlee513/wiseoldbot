@@ -74,7 +74,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 // StartDiscordIRC uses discordgo as an intro to discord IRC
 func (s *Service) StartDiscordIRC() {
 	s.log.Info("Initializing OSRS Disc Bot...")
-	ctx := context.Background()
+	ctx := flume.WithLogger(context.Background(), s.log)
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
 	s.sheets.InitializeMembersFromSheet(ctx, s.members)
@@ -138,20 +138,21 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 }
 
 func (s *Service) updateAllGoogleSheets(ctx context.Context) {
+	logger := flume.FromContext(ctx)
 	// Once the program is interrupted, update the Google Sheet clan points & screenshot sheets
-	s.log.Debug("Running cp sheets updates...")
+	logger.Debug("Running cp sheets updates...")
 	s.sheets.UpdateCpSheet(ctx, s.cp)
-	s.log.Debug("Running cp sc sheets updates...")
+	logger.Debug("Running cp sc sheets updates...")
 	s.sheets.UpdateCpScreenshotsSheet(ctx, s.cpscreenshots)
-	s.log.Debug("Running speed updates...")
+	logger.Debug("Running speed updates...")
 	s.sheets.UpdateSpeedSheet(ctx, s.speed)
-	s.log.Debug("Running speed sc sheets updates...")
+	logger.Debug("Running speed sc sheets updates...")
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
-	s.log.Debug("Running tid sheets updates...")
+	logger.Debug("Running tid sheets updates...")
 	s.sheets.UpdateTIDFromSheet(ctx, s.tid)
-	s.log.Debug("Running members sheets updates...")
+	logger.Debug("Running members sheets updates...")
 	s.sheets.UpdateMembersSheet(ctx, s.members)
-	s.log.Debug("Finished running sheets updates")
+	logger.Debug("Finished running sheets updates")
 }
 
 // initCron will instantiate the HallOfFameRequestInfos and kick off the cron job
@@ -181,12 +182,11 @@ func (s *Service) listenForAllChannelMessages(session *discordgo.Session, messag
 	//	return
 	//}
 
-	ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", message.Author.Username))
-	defer func() { s.tid++ }()
-
 	// Run certain tasks depending on the channel the message was posted in
 	switch channel := message.ChannelID; channel {
 	case s.config.DiscLootLogChan:
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", message.Author.Username))
+		defer func() { s.tid++ }()
 		s.listenForLootLog(ctx, session, message)
 	default:
 		// Return if the message was not posted in one of the channels we are handling
