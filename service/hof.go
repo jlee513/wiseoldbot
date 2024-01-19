@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
@@ -36,28 +35,9 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	for _, requestInfo := range allRequestInfo {
 		logger.Info("Running HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
-		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", requestInfo.AfterId, "")
+		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan, requestInfo.AfterId)
 		if err != nil {
-			logger.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return
-		}
-		var messageIDs []string
-		for _, message := range messages {
-			messageIDs = append(messageIDs, message.ID)
-		}
-
-		if len(messageIDs) > 0 {
-			err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
-			if err != nil {
-				logger.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
-				for _, message := range messageIDs {
-					err = session.ChannelMessageDelete(requestInfo.DiscChan, message)
-					if err != nil {
-						logger.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
-						return
-					}
-				}
-			}
+			logger.Error("Failed to delete discord messages: " + err.Error())
 		}
 
 		// Now add all the bosses
@@ -107,10 +87,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 			}
 
 			// Send the Discord Embed message for the boss podium finish
-			_, err = session.ChannelMessageSendEmbed(requestInfo.DiscChan, embed.NewEmbed().
-				SetTitle(bossName).
-				SetDescription(placements).
-				SetColor(0x1c1c1c).SetThumbnail(bossInfo.ImageLink).MessageEmbed)
+			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, placements, bossInfo.ImageLink)
 			if err != nil {
 				logger.Error("Failed to send message for boss: " + podium.Data.BossName)
 				return
@@ -138,6 +115,7 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan, AfterId: "1195001626604355656", Bosses: util.HofSpeedToa}
 	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan, AfterId: "1196437695522672650", Bosses: util.HofSpeedToae}
 	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, AfterId: "1195002755132174368", Bosses: util.HofSpeedAgility}
+	dt2 := util.SpeedsRequestInfo{Name: "Desert Treasure 2", Bosses: util.HofSpeedDt2, DiscChan: s.config.DiscSpeedDt2Chan, AfterId: "1197895349935812639"}
 
 	var allRequestInfo []util.SpeedsRequestInfo
 	for _, boss := range requestedBosses {
@@ -166,45 +144,24 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 			allRequestInfo = append(allRequestInfo, toae)
 		case "Agility":
 			allRequestInfo = append(allRequestInfo, agility)
+		case "Desert Treasure 2":
+			allRequestInfo = append(allRequestInfo, dt2)
 		}
 	}
 
 	for _, requestInfo := range allRequestInfo {
 		logger.Info("Running Speed HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
-		messages, err := session.ChannelMessages(requestInfo.DiscChan, 50, "", requestInfo.AfterId, "")
+		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan, requestInfo.AfterId)
 		if err != nil {
-			logger.Error("Failed to get all messages for deletion from channel: " + requestInfo.Name)
-			return
-		}
-		var messageIDs []string
-		for _, message := range messages {
-			messageIDs = append(messageIDs, message.ID)
-		}
-		if len(messageIDs) > 0 {
-			err = session.ChannelMessagesBulkDelete(requestInfo.DiscChan, messageIDs)
-			if err != nil {
-				logger.Error("Failed to delete all messages from channel: " + requestInfo.Name + ", will try one by one")
-				for _, message := range messageIDs {
-					err = session.ChannelMessageDelete(requestInfo.DiscChan, message)
-					if err != nil {
-						logger.Error("Failed to delete messages one by one from channel: " + requestInfo.Name)
-						return
-					}
-				}
-			}
+			logger.Error("Failed to bulk delete discord messages: " + err.Error())
 		}
 
 		// Now add all the bosses
 		for _, bossInfo := range requestInfo.Bosses {
 			// Get the speed info
 			speed := s.speed[bossInfo.BossName]
-
-			// Send the Discord Embed message for the boss podium finish
-			_, err = session.ChannelMessageSendEmbed(requestInfo.DiscChan, embed.NewEmbed().
-				SetTitle(bossInfo.BossName).
-				SetDescription("**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00")).
-				SetColor(0x1c1c1c).SetThumbnail(speed.URL).MessageEmbed)
+			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossInfo.BossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
 			if err != nil {
 				logger.Error("Failed to send message for boss: " + bossInfo.BossName)
 				return

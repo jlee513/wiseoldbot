@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
+	"osrs-disc-bot/util"
 )
 
 func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session) {
@@ -47,9 +48,18 @@ func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session
 		"# BACK TO THE TOP: https://discord.com/channels/1172535371905646612/1184829923479797820/1184829923479797820",
 	}
 
-	s.deleteAllMessages(ctx, session, "tob mage", s.config.DiscTobMageGuideChan, "1184610126670336080")
-	s.deleteAllMessages(ctx, session, "tob range", s.config.DiscTobRangeGuideChan, "1184622959466389514")
-	s.deleteAllMessages(ctx, session, "tob melee", s.config.DiscTobMeleeGuideChan, "1184829923479797820")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscTobMageGuideChan, "1184610126670336080")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscTobRangeGuideChan, "1184622959466389514")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscTobMeleeGuideChan, "1184829923479797820")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
 
 	logger.Debug("Updating mage tob guide...")
 	for _, line := range mageSetup {
@@ -206,10 +216,22 @@ func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Sess
 		"https://pastebin.com/RqvZqtu8",
 	}
 
-	s.deleteAllMessages(ctx, session, "cm prep", s.config.DiscTrioCMPrepGuideChan, "1184590018967249006")
-	s.deleteAllMessages(ctx, session, "cm chin", s.config.DiscTrioCMChinGuideChan, "1184590304934891600")
-	s.deleteAllMessages(ctx, session, "cm surge", s.config.DiscTrioCMSurgeGuideChan, "1184590344860487791")
-	s.deleteAllMessages(ctx, session, "cm useful", s.config.DiscTrioCMUsefulInfoChan, "1183782621457694762")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscTrioCMPrepGuideChan, "1184590018967249006")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscTrioCMChinGuideChan, "1184590304934891600")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscTrioCMSurgeGuideChan, "1184590344860487791")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscTrioCMUsefulInfoChan, "1183782621457694762")
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
 
 	logger.Debug("Updating trio cm prep guide...")
 	for _, line := range prepGuide {
@@ -243,33 +265,4 @@ func (s *Service) updateTrioCMGuide(ctx context.Context, session *discordgo.Sess
 			return
 		}
 	}
-}
-
-func (s *Service) deleteAllMessages(ctx context.Context, session *discordgo.Session, guide string, channel string, initialImage string) {
-	logger := flume.FromContext(ctx)
-	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(channel, 100, "", initialImage, "")
-	if err != nil {
-		logger.Error("Failed to get all messages for deletion from the " + guide + " channel")
-		return
-	}
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(channel, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages for deletion from the " + guide + " channel. Will try deleting one by one...")
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(channel, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one for deletion from the " + guide + " channel...")
-					return
-				}
-			}
-		}
-	}
-
-	return
 }

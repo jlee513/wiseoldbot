@@ -204,8 +204,8 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "update-speed",
-					Description: "Update Speed times",
+					Name:        "reset-speed",
+					Description: "Reset Speed times",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
@@ -298,13 +298,10 @@ func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.Interac
 		returnMessage = "Error: Unknown Command Used"
 	}
 
-	session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: returnMessage,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	err := util.InteractionRespond(session, i, returnMessage)
+	if err != nil {
+		logger.Error("Failed to send interaction response: " + err.Error())
+	}
 }
 
 func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.MessageReactionAdd) {

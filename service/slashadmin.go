@@ -6,12 +6,11 @@ import (
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 )
 
 func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
+	logger := flume.FromContext(ctx)
 	options := i.ApplicationCommandData().Options
 	returnMessage := ""
 
@@ -20,35 +19,35 @@ func (s *Service) handleAdmin(ctx context.Context, session *discordgo.Session, i
 		returnMessage = s.handlePlayerAdministration(ctx, session, i)
 		s.updatePpLeaderboard(ctx, session)
 	case "submission-instructions":
-		session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Updating Ponies Point Instructions",
-				Flags:   discordgo.MessageFlagsEphemeral,
-			},
-		})
+		err := util.InteractionRespond(session, i, "Updating Ponies Point Instructions")
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
 		_ = s.updateSubmissionInstructions(ctx, session)
+		return
 	case "update-cp":
 		returnMessage = s.updateCpPoints(ctx, session, i)
-	case "update-speed":
-		returnMessage = s.updateSpeedAdmin(ctx, session, i)
+	case "reset-speed":
+		returnMessage = s.resetSpeedAdmin(ctx, session, i)
 	case "update-leaderboard":
 		s.updateLeaderboard(ctx, session, i)
+	case "update-sheets":
+		err := util.InteractionRespond(session, i, "Updating Google Sheets")
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
 		return
 	}
 
-	session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: returnMessage,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	err := util.InteractionRespond(session, i, returnMessage)
+	if err != nil {
+		logger.Error("Failed to send admin interaction response: " + err.Error())
+	}
 
 	return
 }
 
-func (s *Service) updateSpeedAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) resetSpeedAdmin(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		logger := flume.FromContext(ctx)
@@ -75,38 +74,12 @@ func (s *Service) updateSpeedAdmin(ctx context.Context, session *discordgo.Sessi
 		}
 
 		// Convert the time string into time
-		var t time.Time
-		speedTimeSplit := []string{"22", "22", "22.60"}
-
-		for index, splitTime := range speedTimeSplit {
-			switch index {
-			case 0:
-				c, _ := strconv.Atoi(splitTime)
-				t = t.Add(time.Duration(c) * time.Hour)
-			case 1:
-				c, _ := strconv.Atoi(splitTime)
-				t = t.Add(time.Duration(c) * time.Minute)
-			case 2:
-				if strings.Contains(splitTime, ".") {
-					milliAndSeconds := strings.Split(splitTime, ".")
-					c, _ := strconv.Atoi(milliAndSeconds[0])
-					c2, _ := strconv.Atoi(milliAndSeconds[1])
-					t = t.Add(time.Duration(c) * time.Second)
-					t = t.Add(time.Duration(c2) * time.Millisecond)
-				} else {
-					c, _ := strconv.Atoi(splitTime)
-					t = t.Add(time.Duration(c) * time.Second)
-				}
-			}
-		}
-
+		t := util.CalculateTime("22:22:22.60")
 		s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
 		s.updateSpeedHOF(ctx, session, category)
 
 		// If nothing wrong happened, send a happy message back to the submitter
-		return "Speed submission successfully submitted! Awaiting approval from a moderator!"
-
-		return ""
+		return "Successfully reset speed for " + boss + "!"
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		logger := flume.FromContext(ctx)
 		data := i.ApplicationCommandData().Options[0]
@@ -114,143 +87,12 @@ func (s *Service) updateSpeedAdmin(ctx context.Context, session *discordgo.Sessi
 		switch {
 		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
 		case data.Options[0].Focused:
-			choices = []*discordgo.ApplicationCommandOptionChoice{
-				{
-					Name:  "TzHaar",
-					Value: "TzHaar",
-				},
-				{
-					Name:  "Chambers Of Xeric",
-					Value: "Chambers Of Xeric",
-				},
-				{
-					Name:  "Chambers Of Xeric Challenge Mode",
-					Value: "Chambers Of Xeric Challenge Mode",
-				},
-				{
-					Name:  "Nightmare",
-					Value: "Nightmare",
-				},
-				{
-					Name:  "Theatre Of Blood Hard Mode",
-					Value: "Theatre Of Blood Hard Mode",
-				},
-				{
-					Name:  "Agility",
-					Value: "Agility",
-				},
-				{
-					Name:  "Tombs Of Amascut Expert",
-					Value: "Tombs Of Amascut Expert",
-				},
-				{
-					Name:  "Solo Bosses",
-					Value: "Solo Bosses",
-				},
-				{
-					Name:  "Nex",
-					Value: "Nex",
-				},
-				{
-					Name:  "Slayer",
-					Value: "Slayer",
-				},
-			}
+			choices = util.SpeedAutocompleteCategories
 		case data.Options[1].Focused:
-			switch data.Options[0].Value.(string) {
-			case "TzHaar":
-				for _, option := range util.HofSpeedTzhaar {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Chambers Of Xeric":
-				for _, option := range util.HofSpeedCox {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Chambers Of Xeric Challenge Mode":
-				for _, option := range util.HofSpeedCoxCm {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Nightmare":
-				for _, option := range util.HofSpeedNightmare {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Theatre Of Blood":
-				for _, option := range util.HofSpeedTob {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Theatre Of Blood Hard Mode":
-				for _, option := range util.HofSpeedTobHm {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Agility":
-				for _, option := range util.HofSpeedAgility {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Tombs Of Amascut":
-				for _, option := range util.HofSpeedToa {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Tombs Of Amascut Expert":
-				for _, option := range util.HofSpeedToae {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Solo Bosses":
-				for _, option := range util.HofSpeedSolo {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Nex":
-				for _, option := range util.HofSpeedNex {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Slayer":
-				for _, option := range util.HofSpeedSlayer {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			}
+			choices = util.AppendToHofSpeedArr(data.Options[0].Value.(string))
 		}
 
-		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-			Data: &discordgo.InteractionResponseData{
-				Choices: choices,
-			},
-		})
+		err := util.InteractionRespondChoices(session, i, choices)
 		if err != nil {
 			logger.Error("Failed to handle speed autocomplete: " + err.Error())
 		}
@@ -262,34 +104,8 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	returnMessage := "Successfully updated submission Instructions!"
 	logger := flume.FromContext(ctx)
 
-	// We will update the speed information first
-
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscSpeedSubInfoChan, 100, "", "", "")
-	if err != nil {
-		logger.Error("Failed to get all messages for deletion from channel: Speed Submission Info")
-		return "Failed to get all messages for deletion from channel: Speed Submission Info"
-	}
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscSpeedSubInfoChan, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages from channel: Speed Submission Info, will try one by one")
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscSpeedSubInfoChan, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one from channel: Speed Submission Info")
-					return "Failed to delete messages from channel: Speed Submission Info"
-				}
-			}
-		}
-	} else {
-		logger.Debug("No messages to delete - proceeding with posting")
-	}
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscSpeedSubInfoChan, "")
 
 	speedSubmissionInstruction := []string{
 		"# Instructions for Speed Submissions",
@@ -328,32 +144,9 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 		}
 	}
 
-	// Now we will update the clan points information
-
-	// First, delete all the messages within the channel
-	messages, err = session.ChannelMessages(s.config.DiscPPInfoChan, 100, "", "", "")
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscPPInfoChan, "")
 	if err != nil {
-		logger.Error("Failed to get all messages for deletion from channel: Speed Submission Info")
-		return "Failed to get all messages for deletion from channel: Speed Submission Info"
-	}
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscPPInfoChan, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages from channel: Speed Submission Info, will try one by one")
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscPPInfoChan, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one from channel: Speed Submission Info")
-					return "Failed to delete messages from channel: Speed Submission Info"
-				}
-			}
-		}
-	} else {
-		logger.Debug("No messages to delete - proceeding with posting")
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
 	}
 
 	ppSubmissionInstruction := []string{
@@ -545,29 +338,31 @@ func (s *Service) handleGuideAdministrationSubmission(ctx context.Context, sessi
 
 		switch msg {
 		case "trio-cm":
-			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Received request - kicking off trio-cm guide update. https://discord.com/channels/1172535371905646612/1183750806709735424",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			err := util.InteractionRespond(session, i, "Received request - kicking off trio-cm guide update. https://discord.com/channels/1172535371905646612/1183750806709735424")
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
 			s.updateTrioCMGuide(ctx, session)
 			logger.Info("Successfully updated the trio-cm guide!")
 		case "tob":
-			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Received request - kicking off tob guide update. https://discord.com/channels/1172535371905646612/1184607458153484430",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			err := util.InteractionRespond(session, i, "Received request - kicking off tob guide update. https://discord.com/channels/1172535371905646612/1184607458153484430")
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
 			s.updateTobGuide(ctx, session)
 			logger.Info("Successfully updated the tob guide!")
 		default:
+			err := util.InteractionRespond(session, i, "Unknown guide chosen: "+guide)
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
 			logger.Error("Unknown guide chosen: " + guide)
 		}
 	default:
+		err := util.InteractionRespond(session, i, "Invalid guide management option chosen: "+option)
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
 		logger.Error("Invalid guide management option chosen.")
 	}
 }

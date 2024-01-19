@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
+	"osrs-disc-bot/util"
 	"strings"
 )
 
@@ -52,9 +53,7 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 	// Ensure the player used is valid
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 	// instead of running a for loop inside a for loop when adding Ponies Points
-	whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
-	whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
-
+	whitespaceStrippedMessage := util.WhiteStripCommas(playersInvolved)
 	logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 	names := strings.Split(whitespaceStrippedMessage, ",")
 	for _, name := range names {
@@ -148,12 +147,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 		s.cpscreenshots[submissionUrl] = playersInvolved
 
 		// Update the Ponies Points
-		// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-		// instead of running a for loop inside a for loop when adding Ponies Points
-		whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
-		whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
-
-		names := strings.Split(whitespaceStrippedMessage, ",")
+		names := strings.Split(util.WhiteStripCommas(playersInvolved), ",")
 		for _, name := range names {
 			logger.Debug("Adding Ponies Point to: " + name)
 			s.cp[name] += 1

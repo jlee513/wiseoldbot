@@ -75,6 +75,7 @@ type Config struct {
 	DiscSpeedTOBHMChan     string `mapstructure:"DISCORD_SPEED_TOB_HM_CHANNEL"`
 	DiscSpeedTOAEChan      string `mapstructure:"DISCORD_SPEED_TOA_E_CHANNEL"`
 	DiscSpeedAgilityChan   string `mapstructure:"DISCORD_SPEED_AGILITY_CHANNEL"`
+	DiscSpeedDt2Chan       string `mapstructure:"DISCORD_SPEED_DT2_CHANNEL"`
 }
 
 type MemberInfo struct {

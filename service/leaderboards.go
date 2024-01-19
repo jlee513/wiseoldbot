@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
-	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
@@ -32,44 +30,33 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 		switch leaderboardName {
 		case "Kc":
 			logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
-			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Updating Leaderboard: " + leaderboardName,
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName)
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
 			// If kc is updating, always update all of them
 			s.updateKcHOF(ctx, session)
 		case "Speed":
 			logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
 			if _, ok := util.HofSpeedCategories[threadName]; ok {
-				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
+				err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName+" thread: "+threadName)
+				if err != nil {
+					logger.Error("Failed to send interaction response: " + err.Error())
+				}
 				s.updateSpeedHOF(ctx, session, threadName)
 			} else if strings.Compare(threadName, "All") == 0 {
-				session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Updating All Speed Leaderboards",
-						Flags:   discordgo.MessageFlagsEphemeral,
-					},
-				})
-				s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility")
+				err := util.InteractionRespond(session, i, "Updating All Speed Leaderboards")
+				if err != nil {
+					logger.Error("Failed to send interaction response: " + err.Error())
+				}
+				s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
 			}
 		default:
-			session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Updating Leaderboard: " + leaderboardName + " thread: " + threadName,
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+			err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
+			if err != nil {
+				logger.Error("Failed to send interaction response: " + err.Error())
+			}
+			logger.Error("Unknown leaderboard submitted - please submit a proper leaderboard name")
 		}
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		logger := flume.FromContext(ctx)
@@ -109,12 +96,7 @@ func (s *Service) updateLeaderboard(ctx context.Context, session *discordgo.Sess
 			}
 		}
 
-		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-			Data: &discordgo.InteractionResponseData{
-				Choices: choices,
-			},
-		})
+		err := util.InteractionRespondChoices(session, i, choices)
 		if err != nil {
 			logger.Error("Failed to handle admin autocomplete options: " + err.Error())
 		}
@@ -142,27 +124,9 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	})
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscHOFLeaderboardChan, 50, "", "1196540272486649988", "")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscHOFLeaderboardChan, "1196540272486649988")
 	if err != nil {
-		logger.Error("Failed to get all messages for deletion from the leagues podium channel")
-		return
-	}
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscHOFLeaderboardChan, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscHOFLeaderboardChan, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one from the leagues podium channel")
-					return
-				}
-			}
-		}
+		logger.Error("Failed to bulk delete discord messages: " + err.Error())
 	}
 
 	// Iterate over the players to get the different places for users to create the placements
@@ -173,12 +137,9 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	}
 
 	// Send the Discord Embed message for the leaderboard
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
-		SetTitle("Ponies Hall Of Fame Leaderboard").
-		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscHOFLeaderboardChan, "Ponies Hall Of Fame Leaderboard", placements, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("Failed to send message for leagues podium")
+		logger.Error("Failed to send message for hof leaderboard: " + err.Error())
 		return
 	}
 
@@ -187,11 +148,9 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	msg = msg + "In order to get onto this leaderboard, you must have a podium finish of one of the HOF Bosses. Also, " +
 		"the HOF uses TempleOSRS to get kcs - please turn on the XP Tracker plugin on Runelite and check the TempleOSRS option.\n\n"
 	msg = msg + "3 points for :first_place:\n2 points for :second_place:\n1 points for :third_place:"
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscHOFLeaderboardChan, embed.NewEmbed().
-		SetTitle("How To Get Onto The Ponies HOF Leaderboard").
-		SetDescription(msg).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscHOFLeaderboardChan, "How To Get Onto The Ponies HOF Leaderboard", msg, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
+		logger.Error("Failed to send message for hof leaderboard instructions: " + err.Error())
 		return
 	}
 }
@@ -231,12 +190,9 @@ func (s *Service) updatePpLeaderboard(ctx context.Context, session *discordgo.Se
 	}
 
 	// Send the Discord Embed message
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscPPLeaderboardChan, embed.NewEmbed().
-		SetTitle("Ponies Points Leaderboard").
-		SetDescription(fmt.Sprintf(leaderboard)).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscPPLeaderboardChan, "Ponies Points Leaderboard", leaderboard, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL")
+		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL: " + err.Error())
 		return
 	}
 }
@@ -259,34 +215,13 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscColChan, 10, "", "1196541219581460530", "")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscColChan, "1196541219581460530")
 	if err != nil {
-		logger.Error("Failed to retrieve last 10 messages" + err.Error())
-		return err
-	}
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscColChan, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages from the collection log channel, will try one by one\n" + err.Error())
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscColChan, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one in the collection log channel " + err.Error())
-					return err
-				}
-			}
-		}
+		logger.Error("Failed to bulk delete discord messages: " + err.Error())
 	}
 
 	// Send the Discord Embed message for collection log
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscColChan, embed.NewEmbed().
-		SetTitle("Collection Log Leaderboard").
-		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "Collection Log Leaderboard", placements, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
 		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
@@ -294,15 +229,12 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 
 	// Send the Discord Embed message for instructions on how to get on the collection log hall of fame
 	var msg string
-	msg = msg + "1. Download the collection-log plugin\n"
+	msg = msg + "1. Download the Collection Log plugin\n"
 	msg = msg + "2. Click the box to \"Allow collectionlog.net connections\"\n"
-	msg = msg + "3. Click through the collection log (there will be a * next to the one you still need to click)\n"
+	msg = msg + "3. Click through your collection log in game (there will be a * next to the one you still need to click)\n"
 	msg = msg + "4. Go to the collection log icon on the sidebar\n"
 	msg = msg + "5. Click Account at the top and then upload collection log\n"
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscColChan, embed.NewEmbed().
-		SetTitle("How To Get Onto The Collection Log HOF").
-		SetDescription(msg).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/otTd8Dg.png").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Collection Log HOF", msg, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
 		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
@@ -317,27 +249,9 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	logger.Info("Running leagues hiscores update.")
 
 	// First, delete all the messages within the channel
-	messages, err := session.ChannelMessages(s.config.DiscLeaguesChan, 50, "", "1196540715983974531", "")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscLeaguesChan, "1196540715983974531")
 	if err != nil {
-		logger.Error("Failed to get all messages for deletion from the leagues podium channel.")
-		return
-	}
-	var messageIDs []string
-	for _, message := range messages {
-		messageIDs = append(messageIDs, message.ID)
-	}
-	if len(messageIDs) > 0 {
-		err = session.ChannelMessagesBulkDelete(s.config.DiscLeaguesChan, messageIDs)
-		if err != nil {
-			logger.Error("Failed to delete all messages from the leagues podium channel, will try one by one")
-			for _, message := range messageIDs {
-				err = session.ChannelMessageDelete(s.config.DiscLeaguesChan, message)
-				if err != nil {
-					logger.Error("Failed to delete messages one by one from the leagues podium channel.")
-					return
-				}
-			}
-		}
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
 	}
 
 	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.cp)
@@ -396,10 +310,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	}
 
 	// Send the Discord Embed message for the boss podium finish
-	_, err = session.ChannelMessageSendEmbed(s.config.DiscLeaguesChan, embed.NewEmbed().
-		SetTitle("Ponies Trailblazer Reloaded League Standings").
-		SetDescription(placements).
-		SetColor(0x1c1c1c).SetThumbnail("https://i.imgur.com/wbxOjrR.jpeg").MessageEmbed)
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscLeaguesChan, "Ponies Trailblazer Reloaded League Standings", placements, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
 		logger.Error("Failed to send message for leagues podium.")
 		return

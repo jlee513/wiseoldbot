@@ -63,9 +63,7 @@ func (s *Service) handleSpeedSubmission(ctx context.Context, session *discordgo.
 		// Ensure the player used is valid
 		// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
 		// instead of running a for loop inside a for loop when adding Ponies Points
-		whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
-		whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
-
+		whitespaceStrippedMessage := util.WhiteStripCommas(playersInvolved)
 		logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 		names := strings.Split(whitespaceStrippedMessage, ",")
 		for _, name := range names {
@@ -114,143 +112,12 @@ func (s *Service) handleSpeedSubmission(ctx context.Context, session *discordgo.
 		switch {
 		// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
 		case data.Options[0].Focused:
-			choices = []*discordgo.ApplicationCommandOptionChoice{
-				{
-					Name:  "TzHaar",
-					Value: "TzHaar",
-				},
-				{
-					Name:  "Chambers Of Xeric",
-					Value: "Chambers Of Xeric",
-				},
-				{
-					Name:  "Chambers Of Xeric Challenge Mode",
-					Value: "Chambers Of Xeric Challenge Mode",
-				},
-				{
-					Name:  "Nightmare",
-					Value: "Nightmare",
-				},
-				{
-					Name:  "Theatre Of Blood Hard Mode",
-					Value: "Theatre Of Blood Hard Mode",
-				},
-				{
-					Name:  "Agility",
-					Value: "Agility",
-				},
-				{
-					Name:  "Tombs Of Amascut Expert",
-					Value: "Tombs Of Amascut Expert",
-				},
-				{
-					Name:  "Solo Bosses",
-					Value: "Solo Bosses",
-				},
-				{
-					Name:  "Nex",
-					Value: "Nex",
-				},
-				{
-					Name:  "Slayer",
-					Value: "Slayer",
-				},
-			}
+			choices = util.SpeedAutocompleteCategories
 		case data.Options[1].Focused:
-			switch data.Options[0].Value.(string) {
-			case "TzHaar":
-				for _, option := range util.HofSpeedTzhaar {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Chambers Of Xeric":
-				for _, option := range util.HofSpeedCox {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Chambers Of Xeric Challenge Mode":
-				for _, option := range util.HofSpeedCoxCm {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Nightmare":
-				for _, option := range util.HofSpeedNightmare {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Theatre Of Blood":
-				for _, option := range util.HofSpeedTob {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Theatre Of Blood Hard Mode":
-				for _, option := range util.HofSpeedTobHm {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Agility":
-				for _, option := range util.HofSpeedAgility {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Tombs Of Amascut":
-				for _, option := range util.HofSpeedToa {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Tombs Of Amascut Expert":
-				for _, option := range util.HofSpeedToae {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Solo Bosses":
-				for _, option := range util.HofSpeedSolo {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Nex":
-				for _, option := range util.HofSpeedNex {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			case "Slayer":
-				for _, option := range util.HofSpeedSlayer {
-					choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-						Name:  option.BossName,
-						Value: option.BossName,
-					})
-				}
-			}
+			choices = util.AppendToHofSpeedArr(data.Options[0].Value.(string))
 		}
 
-		err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-			Data: &discordgo.InteractionResponseData{
-				Choices: choices,
-			},
-		})
+		err := util.InteractionRespondChoices(session, i, choices)
 		if err != nil {
 			logger.Error("Failed to handle speed autocomplete: " + err.Error())
 		}
@@ -333,38 +200,15 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		s.speedscreenshots[submissionTime] = util.SpeedScInfo{BossName: bossName, Time: speedTime, PlayersInvolved: playersInvolved, URL: submissionUrl}
 
 		// Only change the current top speed if it's faster
-		var t time.Time
-		speedTimeSplit := strings.Split(speedTime, ":")
-
-		for i, splitTime := range speedTimeSplit {
-			switch i {
-			case 0:
-				c, _ := strconv.Atoi(splitTime)
-				t = t.Add(time.Duration(c) * time.Hour)
-			case 1:
-				c, _ := strconv.Atoi(splitTime)
-				t = t.Add(time.Duration(c) * time.Minute)
-			case 2:
-				if strings.Contains(splitTime, ".") {
-					milliAndSeconds := strings.Split(splitTime, ".")
-					c, _ := strconv.Atoi(milliAndSeconds[0])
-					c2, _ := strconv.Atoi(milliAndSeconds[1])
-					t = t.Add(time.Duration(c) * time.Second)
-					t = t.Add(time.Duration(c2) * time.Millisecond * 10)
-				} else {
-					c, _ := strconv.Atoi(splitTime)
-					t = t.Add(time.Duration(c) * time.Second)
-				}
-			}
-		}
+		t := util.CalculateTime(speedTime)
 
 		// If the submission time is faster than the current speed time for the boss, update it
 		if t.Before(s.speed[bossName].Time) {
 			logger.Info("NEW TIME FOR BOSS: " + bossName)
 			// Add message into new fastest time channel
 			newTimeMsg := fmt.Sprintf("New record for **%s** has been set!\n", bossName)
-			newTimePlayers := strings.Split(playersInvolved, ",")
-			oldTimePlayers := strings.Split(s.speed[bossName].PlayersInvolved, ",")
+			newTimePlayers := strings.Split(util.WhiteStripCommas(playersInvolved), ",")
+			oldTimePlayers := strings.Split(util.WhiteStripCommas(s.speed[bossName].PlayersInvolved), ",")
 
 			for _, player := range newTimePlayers {
 				newTimeMsg = newTimeMsg + "<@" + s.members[player].DiscordId + ">,"
@@ -392,12 +236,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl}
 
 			// Update the Ponies Points
-			// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-			// instead of running a for loop inside a for loop when adding Ponies Points
-			whitespaceStrippedMessage := strings.Replace(playersInvolved, ", ", ",", -1)
-			whitespaceStrippedMessage = strings.Replace(whitespaceStrippedMessage, " ,", ",", -1)
-
-			names := strings.Split(whitespaceStrippedMessage, ",")
+			names := strings.Split(util.WhiteStripCommas(playersInvolved), ",")
 			for _, name := range names {
 				logger.Debug("Adding Ponies Point to: " + name)
 				s.cp[name] += 1
