@@ -186,6 +186,9 @@ func DeleteBulkDiscordMessages(session *discordgo.Session, channel string, after
 			}
 		}
 	}
+
+	// There are some guides that are larger than 100 messages - run it again just in case
+
 	return nil
 }
 

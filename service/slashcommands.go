@@ -94,20 +94,11 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "guide",
-					Description: "Guide name",
-					Required:    true,
-					Choices: []*discordgo.ApplicationCommandOptionChoice{
-						{
-							Name:  "trio-cm",
-							Value: "trio-cm",
-						},
-						{
-							Name:  "tob",
-							Value: "tob",
-						},
-					},
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "guide",
+					Description:  "Guide name",
+					Required:     true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -250,6 +241,11 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					Description: "Update google sheets",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
+				{
+					Name:        "update-guides-map",
+					Description: "Update Guides that are stored in Map",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+				},
 			},
 		},
 	}
@@ -292,9 +288,7 @@ func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.Interac
 			s.log.Error("Failed to send interaction response: " + err.Error())
 		}
 	case "guide":
-		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
-		defer func() { s.tid++ }()
-		s.handleGuideAdministrationSubmission(ctx, session, i)
+		s.handleGuide(session, i)
 		return
 	case "admin":
 		s.handleAdmin(session, i)

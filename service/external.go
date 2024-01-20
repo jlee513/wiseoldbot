@@ -18,7 +18,6 @@ type collectionLog interface {
 }
 
 type sheets interface {
-	InitializeDiscordChannels(ctx context.Context, discChans map[string]string)
 	InitializeCpFromSheet(ctx context.Context, cp map[string]int)
 	InitializeSpeedsFromSheet(ctx context.Context, speed map[string]util.SpeedInfo)
 	InitializeTIDFromSheet(ctx context.Context) int
@@ -43,5 +42,6 @@ type runescape interface {
 }
 
 type pastebin interface {
+	UpdateGuideList(ctx context.Context, pastebinGuides map[string][]util.GuideInfo)
 	GetGuide(ctx context.Context, guideName string) string
 }

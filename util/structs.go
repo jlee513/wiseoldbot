@@ -95,6 +95,12 @@ type SpeedInfo struct {
 	URL             string    `json:"url"`
 }
 
+type GuideInfo struct {
+	GuidePageName string `json:"guidePageName"`
+	PastebinKey   string `json:"pastebinKey"`
+	DiscChan      string `json:"discChan"`
+}
+
 type SpeedScInfo struct {
 	PlayersInvolved string `json:"playersInvolved"`
 	Time            string `json:"time"`

@@ -47,13 +47,31 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 	case "update-leaderboard":
 		s.updateLeaderboard(session, i)
 	case "update-sheets":
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		logger := flume.FromContext(ctx)
+		defer func() { s.tid++ }()
 		err := util.InteractionRespond(session, i, "Updating Google Sheets")
 		if err != nil {
-			s.log.Error("Failed to send interaction response: " + err.Error())
+			logger.Error("Failed to send interaction response: " + err.Error())
 		}
-		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
-		defer func() { s.tid++ }()
 		s.updateAllGoogleSheets(ctx)
+		return
+	case "update-guides-map":
+		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		logger := flume.FromContext(ctx)
+		defer func() { s.tid++ }()
+		logger.Info("Updating Guides stored in Map...")
+		err := util.InteractionRespond(session, i, "Updating Guides stored in Map")
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
+		s.pastebin.UpdateGuideList(ctx, s.discGuides)
+		for _, discGuidesInfos := range s.discGuides {
+			for _, discGuidesInfo := range discGuidesInfos {
+				logger.Debug("Updating: " + discGuidesInfo.GuidePageName)
+			}
+		}
+		logger.Info("Finished updating Guides stored in Map")
 		return
 	}
 
@@ -353,51 +371,6 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 
 	default:
 		return "Invalid player management option chosen."
-	}
-}
-
-func (s *Service) handleGuideAdministrationSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
-	logger := flume.FromContext(ctx)
-	options := i.ApplicationCommandData().Options
-
-	option := options[0].Value.(string)
-	guide := options[1].Value.(string)
-
-	switch option {
-	case "Update":
-		// Remove leading and trailing whitespaces
-		msg := strings.TrimSpace(guide)
-		logger.Debug("Updating guide: " + msg)
-
-		switch msg {
-		case "trio-cm":
-			err := util.InteractionRespond(session, i, "Received request - kicking off trio-cm guide update. https://discord.com/channels/1172535371905646612/1183750806709735424")
-			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
-			}
-			s.updateTrioCMGuide(ctx, session)
-			logger.Info("Successfully updated the trio-cm guide!")
-		case "tob":
-			err := util.InteractionRespond(session, i, "Received request - kicking off tob guide update. https://discord.com/channels/1172535371905646612/1184607458153484430")
-			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
-			}
-			//s.updateGuide(ctx, session, "Tob Mage")
-			s.updateTobGuide(ctx, session)
-			logger.Info("Successfully updated the tob guide!")
-		default:
-			err := util.InteractionRespond(session, i, "Unknown guide chosen: "+guide)
-			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
-			}
-			logger.Error("Unknown guide chosen: " + guide)
-		}
-	default:
-		err := util.InteractionRespond(session, i, "Invalid guide management option chosen: "+option)
-		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
-		}
-		logger.Error("Invalid guide management option chosen.")
 	}
 }
 
