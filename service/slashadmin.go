@@ -136,32 +136,35 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	speedSubmissionInstruction := []string{
 		"# Instructions for Speed Submissions",
 		"In order to manually submit for speed times, use the /speed-submissions command. There will be **4 mandatory fields** which are automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
-		"## Mandatory Fields For Speed Submissions",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
+		"## ******__Mandatory Fields For Speed Submissions__******",
 		"https://i.imgur.com/MK6BzCK.png",
-		"### category\nThis has a list of all the speed categories you see in the hof-speeds forum. Select one of these in order to proceed in the submission",
+		"### <:ponies:1197979241959145636> category\nThis has a list of all the speed categories you see in the hof-speeds forum. Select one of these in order to proceed in the submission",
 		"https://i.imgur.com/uVDhk9U.png",
-		"### boss\nThis has a list of all the bosses in the previously selected category. Select one of these options to make a speed submission for",
+		"### <:ponies:1197979241959145636> boss\nThis has a list of all the bosses in the previously selected category. Select one of these options to make a speed submission for",
 		"https://i.imgur.com/gXD9bHy.png",
-		"### speed-time\nThe time must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds. The following example is 20 hours, 20 minutes, 20 seconds and 1 tick",
+		"### <:ponies:1197979241959145636> speed-time\nThe time must be in the format of hh:mm:ss.ms where hh = hours, mm = minutes, ss = seconds, and ms = milliseconds. The following example is 20 hours, 20 minutes, 20 seconds and 1 tick",
 		"https://i.imgur.com/uzwDOL3.png",
-		"### player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
+		"### <:ponies:1197979241959145636> player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
 		"https://i.imgur.com/ML14RzQ.png",
-		"## Additional Fields",
+		"## ******__Additional Fields__******",
 		"https://i.imgur.com/dD4FKb9.png",
 		"**NOTE: Only 1 or either the screenshot field or i-imgur-link field is acceptable. Using both will cause and error as well as using none!**",
-		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
+		"### <:ponies:1197979241959145636> screenshot\nThis allows you to select an image from your computer to upload to the submission",
 		"https://i.imgur.com/SGvWSt8.png",
-		"### i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
+		"### <:ponies:1197979241959145636> i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
 		"https://i.imgur.com/TaoiTLG.png",
-		"# Examples of submissions",
-		"## Speed Submission using screenshot",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
+		"# ******Speed Submission using screenshot******",
 		"https://i.imgur.com/IlgOsfy.gif",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
 		"# What happens when your screenshot gets approved/denied",
 		"Once a moderator approves/denies your submission, a message will popup in a private channel between you and the moderators with feedback on your submission",
 		"https://i.imgur.com/V5AiTyZ.png",
 		"If you have an issue, you can ask the moderators there about what was incorrect about your submission.",
 	}
 
+	logger.Debug("Running speed submission instruction update")
 	for _, msg := range speedSubmissionInstruction {
 		_, err := session.ChannelMessageSend(s.config.DiscSpeedSubInfoChan, msg)
 		if err != nil {
@@ -178,26 +181,29 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	ppSubmissionInstruction := []string{
 		"# Instructions for Ponies Points Submissions",
 		"In order to manually submit for ponies points, use the /pp-submissions command. There will be **1 mandatory field** which is automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
-		"## Mandatory Fields For Speed Submissions",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
+		"## ******Mandatory Fields For Speed Submissions******",
 		"https://i.imgur.com/hi66ThP.png",
-		"### player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
+		"### <:ponies:1197979241959145636> player-names\nThis is comma separated list of all the participating ponies members. Any non-members submitted will cause an error in the submission.",
 		"https://i.imgur.com/lzYUZUz.png",
-		"## Additional Fields",
+		"## ******Additional Fields******",
 		"https://i.imgur.com/dD4FKb9.png",
 		"**NOTE: Only 1 or either the screenshot field or i-imgur-link field is acceptable. Using both will cause and error as well as using none!**",
-		"### screenshot\nThis allows you to select an image from your computer to upload to the submission",
+		"### <:ponies:1197979241959145636> screenshot\nThis allows you to select an image from your computer to upload to the submission",
 		"https://i.imgur.com/SGvWSt8.png",
-		"### i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
+		"### <:ponies:1197979241959145636> i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
 		"https://i.imgur.com/TaoiTLG.png",
-		"# Examples of submissions",
-		"## PP Submission using screenshot",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
+		"# ******PP Submission using screenshot******",
 		"https://i.imgur.com/FAFCyim.gif",
+		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
 		"# What happens when your screenshot gets approved/denied",
 		"Once a moderator approves/denies your submission, a message will popup in a private channel between you and the moderators with feedback on your submission",
 		"https://i.imgur.com/QUvB4oo.png",
 		"If you have an issue, you can ask the moderators there about what was incorrect about your submission.",
 	}
 
+	logger.Debug("Running speed submission instruction update")
 	for _, msg := range ppSubmissionInstruction {
 		_, err := session.ChannelMessageSend(s.config.DiscPPInfoChan, msg)
 		if err != nil {
@@ -238,6 +244,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 		}
 	}
 
+	logger.Debug("Successfully updated speed submission instruction!")
 	return returnMessage
 }
 
@@ -375,6 +382,7 @@ func (s *Service) handleGuideAdministrationSubmission(ctx context.Context, sessi
 			if err != nil {
 				logger.Error("Failed to send interaction response: " + err.Error())
 			}
+			//s.updateGuide(ctx, session, "Tob Mage")
 			s.updateTobGuide(ctx, session)
 			logger.Info("Successfully updated the tob guide!")
 		default:

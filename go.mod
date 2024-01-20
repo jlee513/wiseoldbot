@@ -16,6 +16,7 @@ require (
 require (
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	github.com/TwiN/go-pastebin v1.0.2 // indirect
 	github.com/ansel1/merry v1.6.1 // indirect
 	github.com/ansel1/merry/v2 v2.0.0-beta.10 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

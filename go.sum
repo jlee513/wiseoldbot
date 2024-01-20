@@ -44,6 +44,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646 h1:KkKIDMzyOhNnW5ew6KpRvEflciWqo09NmgVGqTZEj3M=
 github.com/Clinet/discordgo-embed v0.0.0-20220113222025-bafe0c917646/go.mod h1:0ydUl+01209LCyzJk68BeRtCN1IMrNJgX4IBmwmC1f8=
+github.com/TwiN/go-pastebin v1.0.2 h1:1e1eohCuTRZMZ6cxuSswsCfUOvlq9NvosdP+g+yOxJ0=
+github.com/TwiN/go-pastebin v1.0.2/go.mod h1:q+APl3yzVTpYt0p49muLOwuQwGccnlc0Y6tL/UgWhRM=
 github.com/ansel1/merry v1.5.0/go.mod h1:wUy/yW0JX0ix9GYvUbciq+bi3jW/vlKPlbpI7qdZpOw=
 github.com/ansel1/merry v1.5.1/go.mod h1:wUy/yW0JX0ix9GYvUbciq+bi3jW/vlKPlbpI7qdZpOw=
 github.com/ansel1/merry v1.6.1 h1:AuheQTqQ04yQdBMCDnneVPvpBdWTBBg3LKMvKGMyRxU=

@@ -18,10 +18,12 @@ type collectionLog interface {
 }
 
 type sheets interface {
+	InitializeDiscordChannels(ctx context.Context, discChans map[string]string)
 	InitializeCpFromSheet(ctx context.Context, cp map[string]int)
 	InitializeSpeedsFromSheet(ctx context.Context, speed map[string]util.SpeedInfo)
 	InitializeTIDFromSheet(ctx context.Context) int
 	InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo)
+	UpdateDiscordChannels(ctx context.Context, discChans map[string]string)
 	UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo)
 	UpdateTIDFromSheet(ctx context.Context, tid int)
 	UpdateCpSheet(ctx context.Context, cp map[string]int)
@@ -38,4 +40,8 @@ type temple interface {
 
 type runescape interface {
 	GetLeaguesPodiumFromRS(ctx context.Context, cp map[string]int) (map[string]int, []string)
+}
+
+type pastebin interface {
+	GetGuide(ctx context.Context, guideName string) string
 }
