@@ -15,24 +15,26 @@ import (
 )
 
 type GoogleSheetsClient struct {
-	client       *http.Client
-	cpSheet      string
-	cpScSheet    string
-	speedSheet   string
-	speedScSheet string
-	tidSheet     string
-	members      string
+	client          *http.Client
+	cpSheet         string
+	cpScSheet       string
+	speedSheet      string
+	speedScSheet    string
+	tidSheet        string
+	members         string
+	discordChannels string
 }
 
-func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, speedScSheet string, tidSheet string, members string) *GoogleSheetsClient {
+func NewGoogleSheetsClient(config *util.Config) *GoogleSheetsClient {
 	client := new(GoogleSheetsClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
-	client.cpSheet = cpSheet
-	client.cpScSheet = cpScSheet
-	client.speedSheet = speedSheet
-	client.speedScSheet = speedScSheet
-	client.tidSheet = tidSheet
-	client.members = members
+	client.cpSheet = config.SheetsCp
+	client.cpScSheet = config.SheetsCpSC
+	client.speedSheet = config.SheetsSpeed
+	client.speedScSheet = config.SheetsSpeedSC
+	client.tidSheet = config.SheetsTid
+	client.members = config.SheetsMembers
+	client.discordChannels = config.SheetsDiscordChannels
 	return client
 }
 
@@ -40,7 +42,7 @@ func NewGoogleSheetsClient(cpSheet string, cpScSheet string, speedSheet string, 
 prepGoogleSheet will read the credentials in the client_secret.json in order to retrieve the JWT that
 is used to fetch the spreadsheet. Once fetched, it is returned to whichever function needs it
 */
-func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
+func (g *GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	// Create the client with the correct JWT configuration
 	data, err := os.ReadFile("config/client_secret.json")
 	checkError(err)
@@ -58,11 +60,59 @@ func (g GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
 	return sheet
 }
 
+func (g *GoogleSheetsClient) InitializeDiscordChannels(ctx context.Context, discChans map[string]string) {
+	sheet := g.prepGoogleSheet(g.discordChannels)
+
+	header := true
+
+	// Set the in memory cp map with the Google sheets information
+	for _, row := range sheet.Rows {
+		if header {
+			header = false
+			continue
+		}
+		isChannelName := true
+		channelName := ""
+		channelId := ""
+		for _, cell := range row {
+			if isChannelName {
+				channelName = cell.Value
+			} else {
+				channelId = strings.Replace(cell.Value, "ponies", "", -1)
+				break
+			}
+			isChannelName = false
+		}
+		discChans[channelName] = channelId
+	}
+}
+
+func (g *GoogleSheetsClient) UpdateDiscordChannels(ctx context.Context, discChans map[string]string) {
+	sheet := g.prepGoogleSheet(g.discordChannels)
+
+	// Delete all the values in the sheet before proceeding with the insertion of clan points
+	// We are deleting as this is an easier way of ensuring deleted people are removed from the
+	// sheets without adding additional logic
+
+	// Update the Google sheets information with the in memory cp map
+	row := 1
+
+	for channel, channelId := range discChans {
+		sheet.Update(row, 0, channel)
+		sheet.Update(row, 1, "ponies"+channelId)
+		row++
+	}
+
+	// Make sure call Synchronize to reflect the changes
+	err := sheet.Synchronize()
+	checkError(err)
+}
+
 /*
 InitializeCpFromSheet will take all the clan points from the CP Google Sheet and populate the
 cp map for use within the bot
 */
-func (g GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[string]int) {
+func (g *GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[string]int) {
 	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	header := true
@@ -89,7 +139,7 @@ func (g GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[st
 	}
 }
 
-func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speeds map[string]util.SpeedInfo) {
+func (g *GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speeds map[string]util.SpeedInfo) {
 	sheet := g.prepGoogleSheet(g.speedSheet)
 
 	header := true
@@ -150,13 +200,13 @@ func (g GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speed
 	}
 }
 
-func (g GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
+func (g *GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
 	sheet := g.prepGoogleSheet(g.tidSheet)
 	tid, _ := strconv.Atoi(sheet.Rows[0][0].Value)
 	return tid
 }
 
-func (g GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo) {
+func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo) {
 	sheet := g.prepGoogleSheet(g.members)
 
 	header := true
@@ -210,7 +260,7 @@ func (g GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, memb
 		}
 	}
 }
-func (g GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo) {
+func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo) {
 	sheet := g.prepGoogleSheet(g.members)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
@@ -233,7 +283,7 @@ func (g GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map[
 	checkError(err)
 }
 
-func (g GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
+func (g *GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
 	sheet := g.prepGoogleSheet(g.tidSheet)
 	sheet.Update(0, 0, strconv.Itoa(tid))
 	// Make sure call Synchronize to reflect the changes
@@ -245,7 +295,7 @@ func (g GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
 UpdateCpSheet will take the cp map that was being locally updated and save it to the
 CP Google Sheets
 */
-func (g GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]int) {
+func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]int) {
 	sheet := g.prepGoogleSheet(g.cpSheet)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
@@ -281,7 +331,7 @@ func (g GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]int
 UpdateCpScreenshotsSheet will take all the cpscreenshots map and store the imgur link along with the
 people who got that item in the Google Sheet
 */
-func (g GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
+func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
 	// If no screenshots need to be uploaded, skip
 	if len(cpscreenshots) == 0 {
 		return
@@ -308,7 +358,7 @@ func checkError(err error) {
 	}
 }
 
-func (g GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo) {
+func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo) {
 	// If no screenshots need to be uploaded, skip
 	if len(speed) == 0 {
 		return
@@ -317,101 +367,8 @@ func (g GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[stri
 
 	// Overwrite the rows
 	startingRow := 1
-
-	// To ensure order, we will make an array that will be used to get the key/value from the map
-	order := []string{"TzHaar Fight Cave",
-		"Inferno",
-		"Alchemical Hydra",
-		"Fragment of Seren",
-		"Galvek",
-		"The Gauntlet",
-		"The Corrupted Gauntlet",
-		"Grotesque Guardians",
-		"Hespori",
-		"Phantom Muspah",
-		"Nex",
-		"The Nightmare Solo",
-		"The Nightmare 2",
-		"The Nightmare 3",
-		"The Nightmare 4",
-		"The Nightmare 5",
-		"The Nightmare 6+",
-		"Phosani's Nightmare",
-		"Vorkath",
-		"Zulrah",
-		"Tempoross",
-		"Chambers of Xeric Solo",
-		"Chambers of Xeric 2",
-		"Chambers of Xeric 3",
-		"Chambers of Xeric 4",
-		"Chambers of Xeric 5",
-		"Chambers of Xeric 6",
-		"Chambers of Xeric 7",
-		"Chambers of Xeric 8",
-		"Chambers of Xeric 9",
-		"Chambers of Xeric 10",
-		"Chambers of Xeric 11-15",
-		"Chambers of Xeric 16-23",
-		"Chambers of Xeric 24+",
-		"Chambers of Xeric - Challenge mode Solo",
-		"Chambers of Xeric - Challenge mode 2",
-		"Chambers of Xeric - Challenge mode 3",
-		"Chambers of Xeric - Challenge mode 4",
-		"Chambers of Xeric - Challenge mode 5",
-		"Chambers of Xeric - Challenge mode 6",
-		"Chambers of Xeric - Challenge mode 7",
-		"Chambers of Xeric - Challenge mode 8",
-		"Chambers of Xeric - Challenge mode 9",
-		"Chambers of Xeric - Challenge mode 10",
-		"Theatre of Blood Room 2",
-		"Theatre of Blood Room 3",
-		"Theatre of Blood Room 4",
-		"Theatre of Blood Room 5",
-		"Theatre of Blood Overall 2",
-		"Theatre of Blood Overall 3",
-		"Theatre of Blood Overall 4",
-		"Theatre of Blood Overall 5",
-		"Theatre of Blood - Hard Room 3",
-		"Theatre of Blood - Hard Room 4",
-		"Theatre of Blood - Hard Room 5",
-		"Theatre of Blood - Hard Overall 3",
-		"Theatre of Blood - Hard Overall 4",
-		"Theatre of Blood - Hard Overall 5",
-		"Tombs of Amascut Room Solo",
-		"Tombs of Amascut Room 2",
-		"Tombs of Amascut Room 3",
-		"Tombs of Amascut Room 4",
-		"Tombs of Amascut Room 5",
-		"Tombs of Amascut Room 6",
-		"Tombs of Amascut Room 7",
-		"Tombs of Amascut Overall Solo",
-		"Tombs of Amascut Overall 2",
-		"Tombs of Amascut Overall 3",
-		"Tombs of Amascut Overall 4",
-		"Tombs of Amascut Overall 5",
-		"Tombs of Amascut Overall 6",
-		"Tombs of Amascut Overall 7",
-		"Tombs of Amascut Expert Room Solo",
-		"Tombs of Amascut Expert Room 2",
-		"Tombs of Amascut Expert Room 3",
-		"Tombs of Amascut Expert Room 4",
-		"Tombs of Amascut Expert Room 5",
-		"Tombs of Amascut Expert Room 6",
-		"Tombs of Amascut Expert Room 7",
-		"Tombs of Amascut Expert Room 8",
-		"Tombs of Amascut Expert Overall Solo",
-		"Tombs of Amascut Expert Overall 2",
-		"Tombs of Amascut Expert Overall 3",
-		"Tombs of Amascut Expert Overall 4",
-		"Tombs of Amascut Expert Overall 5",
-		"Tombs of Amascut Expert Overall 6",
-		"Tombs of Amascut Expert Overall 7",
-		"Tombs of Amascut Expert Overall 8",
-		"Hallowed Sepulchre",
-		"Prifddinas Agility Course",
-	}
-
-	for _, name := range order {
+	
+	for _, name := range util.HofOrder {
 		sheet.Update(startingRow, 0, name)
 		sheet.Update(startingRow, 1, speed[name].Time.Format("15:04:05.00"))
 		sheet.Update(startingRow, 2, speed[name].PlayersInvolved)
@@ -424,7 +381,7 @@ func (g GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[stri
 	checkError(err)
 }
 
-func (g GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo) {
+func (g *GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo) {
 	// If no screenshots need to be uploaded, skip
 	if len(speedscreenshots) == 0 {
 		return

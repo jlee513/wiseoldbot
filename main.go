@@ -11,13 +11,14 @@ func main() {
 	cfg := config.InitializeConfig()
 
 	// Initialize the clients that make external calls
+	sheets := http.NewGoogleSheetsClient(cfg)
 	collectionLog := http.NewCollectionLogClient()
-	sheets := http.NewGoogleSheetsClient(cfg.SheetsCp, cfg.SheetsCpSC, cfg.SheetsSpeed, cfg.SheetsSpeedSC, cfg.SheetsTid, cfg.SheetsMembers)
 	imgur := http.NewImgurClient()
 	temple := http.NewTempleClient()
 	runescape := http.NewRunescapeClient()
+	pastebin := http.NewPastebinClient(cfg.PastebinUsername, cfg.PastebinPassword, cfg.PastebinDevApiKey, cfg.PastebinMainPasteKey)
 
 	// Create the discord bot service and initialize the IRC
-	osrsDiscBotService := service.NewService(cfg, collectionLog, sheets, imgur, temple, runescape)
+	osrsDiscBotService := service.NewService(cfg, collectionLog, sheets, imgur, temple, runescape, pastebin)
 	osrsDiscBotService.StartDiscordIRC()
 }

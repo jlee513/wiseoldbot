@@ -22,6 +22,7 @@ type Service struct {
 	imgur         imgur
 	temple        temple
 	runescape     runescape
+	pastebin      pastebin
 
 	cp               map[string]int
 	cpscreenshots    map[string]string
@@ -30,6 +31,7 @@ type Service struct {
 	log              flume.Logger
 	tid              int
 	members          map[string]util.MemberInfo
+	discGuides       map[string]string
 
 	registeredCommands []*discordgo.ApplicationCommand
 
@@ -39,7 +41,7 @@ type Service struct {
 	scheduler *gocron.Scheduler
 }
 
-func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imgur imgur, temple temple, runescape runescape) *Service {
+func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imgur imgur, temple temple, runescape runescape, pastebin pastebin) *Service {
 	logger := flume.New("service")
 	if config.LogDebug {
 		_ = flume.Configure(flume.Config{Development: true, Levels: "*"})
@@ -55,6 +57,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		imgur:         imgur,
 		temple:        temple,
 		runescape:     runescape,
+		pastebin:      pastebin,
 
 		cp:               make(map[string]int),
 		cpscreenshots:    make(map[string]string),
@@ -63,6 +66,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		log:              logger,
 		tid:              1,
 		members:          make(map[string]util.MemberInfo),
+		discGuides:       make(map[string]string),
 
 		config: config,
 		client: client,
@@ -75,6 +79,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 func (s *Service) StartDiscordIRC() {
 	s.log.Info("Initializing OSRS Disc Bot...")
 	ctx := flume.WithLogger(context.Background(), s.log)
+	s.sheets.InitializeDiscordChannels(ctx, s.discGuides)
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
 	s.sheets.InitializeMembersFromSheet(ctx, s.members)
@@ -152,6 +157,8 @@ func (s *Service) updateAllGoogleSheets(ctx context.Context) {
 	s.sheets.UpdateTIDFromSheet(ctx, s.tid)
 	logger.Debug("Running members sheets updates...")
 	s.sheets.UpdateMembersSheet(ctx, s.members)
+	logger.Debug("Running discord guide channels sheets updates...")
+	s.sheets.UpdateDiscordChannels(ctx, s.discGuides)
 	logger.Debug("Finished running sheets updates")
 }
 

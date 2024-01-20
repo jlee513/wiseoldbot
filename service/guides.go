@@ -7,6 +7,31 @@ import (
 	"osrs-disc-bot/util"
 )
 
+//func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, guideName string) {
+//	logger := flume.FromContext(ctx)
+//	guide := s.pastebin.GetGuide(ctx, guideName)
+//	guideArr := strings.Split(guide, "\n")
+//
+//	err := util.DeleteBulkDiscordMessages(session, s.discGuides["GUIDE_TOB_MAGE"], "1184610126670336080")
+//	if err != nil {
+//		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+//	}
+//
+//	logger.Debug("Updating guide: " + guideName + "...")
+//
+//	for _, line := range guideArr {
+//		if len(line) == 1 {
+//			continue
+//		}
+//		_, err := session.ChannelMessageSend(s.disc["GUIDE_TOB_MAGE"], line)
+//		if err != nil {
+//			logger.Error("ERROR SENDING MESSAGES TO DISCORD TOB MAGE CHANNEL: " + err.Error())
+//			return
+//		}
+//	}
+//	logger.Debug("Finished updating guide: " + guideName)
+//}
+
 func (s *Service) updateTobGuide(ctx context.Context, session *discordgo.Session) {
 	logger := flume.FromContext(ctx)
 	mageSetup := []string{
