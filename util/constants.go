@@ -499,6 +499,7 @@ var LootLogClanPoint = map[string]string{
 	"Twisted bow":                  "COX",
 	"Twisted ancestral colour kit": "COX",
 	"Metamorphic dust":             "COX",
+	"Onyx":                         "COX",
 
 	// TOB
 	"Avernic defender hilt":         "TOB",

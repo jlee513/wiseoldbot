@@ -333,7 +333,7 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 	if len(name) > 0 {
 		// If we are provided the username, we can skip the iteration through s.members
 		if len(s.members[name].Feedback) > 0 {
-			logger.Debug("Feedback channel found for user: " + user)
+			logger.Debug("Feedback channel found for user: " + s.members[name].DiscordName)
 			return s.members[name].Feedback
 		} else {
 			logger.Debug("Feedback channel not found for user: " + user + " - will proceed to create one")
@@ -351,6 +351,12 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 				}
 			}
 		}
+	}
+
+	// Ensure that the user & userid is filled in before proceeding to create the channel
+	if len(user) == 0 || len(userId) == 0 {
+		user = s.members[name].DiscordName
+		userId = s.members[name].DiscordId
 	}
 
 	// If feedback is not set, we will create a feedback channel and set it
