@@ -194,9 +194,18 @@ func DeleteBulkDiscordMessages(session *discordgo.Session, channel string, after
 
 func SendDiscordEmbedMsg(session *discordgo.Session, channel, title, description, thumbnailUrl string) error {
 	// Send the Discord Embed message for the boss podium finish
-	_, err := session.ChannelMessageSendEmbed(channel, embed.NewEmbed().
-		SetTitle(title).
-		SetDescription(description).
-		SetColor(0x1c1c1c).SetThumbnail(thumbnailUrl).MessageEmbed)
-	return err
+	if len(thumbnailUrl) > 0 {
+		_, err := session.ChannelMessageSendEmbed(channel, embed.NewEmbed().
+			SetTitle(title).
+			SetDescription(description).
+			SetColor(0x1c1c1c).
+			SetThumbnail(thumbnailUrl).MessageEmbed)
+		return err
+	} else {
+		_, err := session.ChannelMessageSendEmbed(channel, embed.NewEmbed().
+			SetTitle(title).
+			SetDescription(description).
+			SetColor(0x1c1c1c).MessageEmbed)
+		return err
+	}
 }

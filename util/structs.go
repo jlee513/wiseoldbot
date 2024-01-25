@@ -63,6 +63,7 @@ type Config struct {
 	DiscPVPChan            string `mapstructure:"DISCORD_PVP_CHANNEL"`
 	DiscCluesChan          string `mapstructure:"DISCORD_CLUES_CHANNEL"`
 	DiscColChan            string `mapstructure:"DISCORD_COL_CHANNEL"`
+	DiscPetChan            string `mapstructure:"DISCORD_PET_CHANNEL"`
 	DiscLeaguesChan        string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	DiscHOFLeaderboardChan string `mapstructure:"DISCORD_HOF_LEADERBOARD_CHANNEL"`
 	DiscNewFastestTimeChan string `mapstructure:"DISCORD_NEW_FASTEST_TIME_CHANNEL"`
@@ -147,7 +148,19 @@ type BossInfo struct {
 type CollectionLogInfo struct {
 	CollectionLog struct {
 		Uniques int `json:"uniqueObtained"`
+		Tabs    struct {
+			Other struct {
+				AllPets struct {
+					Items []PetInfo `json:"items"`
+				} `json:"All Pets"`
+			} `json:"other"`
+		} `json:"tabs"`
 	} `json:"collectionLog"`
+}
+
+type PetInfo struct {
+	Name     string `json:"name"`
+	Quantity int    `json:"quantity"`
 }
 
 type ImageInfoDataWrapper struct {
