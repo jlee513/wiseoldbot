@@ -661,6 +661,8 @@ var LootLogClanPoint = map[string]string{
 	"Abyssal blue dye":        "Other",
 	"Abyssal red dye":         "Other",
 
+	"Scurrius' spine": "Scurrius",
+
 	// Zulrah
 	"Tanzanite mutagen": "Zulrah",
 	"Magma mutagen":     "Zulrah",
