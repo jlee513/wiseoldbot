@@ -14,7 +14,7 @@ type imgur interface {
 }
 
 type collectionLog interface {
-	RetrieveCollectionLogAndOrder(ctx context.Context, cp map[string]int) (map[string]int, []string)
+	RetrieveCollectionLogAndOrder(ctx context.Context, members map[string]util.MemberInfo) map[string]util.CollectionLogInfo
 }
 
 type sheets interface {

@@ -60,6 +60,14 @@ func (s *Service) updateLeaderboardCommand(session *discordgo.Session, i *discor
 			}
 			s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
 		}
+	case "Leaderboard":
+		logger.Info("Admin invoked Leaderboard Update: ", i.Member.User.Username)
+		err := util.InteractionRespond(session, i, "Updating Leaderboard: "+threadName)
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
+		// If kc is updating, always update all of them
+		s.updateColLog(ctx, session)
 	default:
 		err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
 		if err != nil {
@@ -83,6 +91,10 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 				Name:  "Speed",
 				Value: "Speed",
 			},
+			{
+				Name:  "Leaderboard",
+				Value: "Leaderboard",
+			},
 		}
 	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
 	case data.Options[0].Options[1].Focused:
@@ -102,6 +114,11 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
 				Name:  "All",
 				Value: "All",
+			})
+		case "Leaderboard":
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  "Collection Log",
+				Value: "Collection Log",
 			})
 		}
 	}
@@ -215,12 +232,23 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	logger := flume.FromContext(ctx)
 	logger.Info("Running collection log hiscores update...")
 
-	podium, ranking := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.cp)
+	coLog := s.collectionLog.RetrieveCollectionLogAndOrder(ctx, s.members)
+
+	// Create a slice and use that to sort the coLog
+	ranking := make([]string, 0, len(coLog))
+	for key := range coLog {
+		ranking = append(ranking, key)
+	}
+
+	// Sort the map based on the values
+	sort.SliceStable(ranking, func(i, j int) bool {
+		return coLog[ranking[i]].CollectionLog.Uniques > coLog[ranking[j]].CollectionLog.Uniques
+	})
 
 	// Create the leaderboard message that will be sent
 	placements := ""
 	for placement, k := range ranking {
-		placements = placements + strconv.Itoa(placement+1) + ". " + k + " [" + strconv.Itoa(podium[k]) + "]\n"
+		placements = placements + strconv.Itoa(placement+1) + ". " + k + " [" + strconv.Itoa(coLog[k].CollectionLog.Uniques) + "]\n"
 	}
 
 	// First, delete all the messages within the channel
@@ -243,13 +271,76 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	msg = msg + "3. Click through your collection log in game (there will be a * next to the one you still need to click)\n"
 	msg = msg + "4. Go to the collection log icon on the sidebar\n"
 	msg = msg + "5. Click Account at the top and then upload collection log\n"
-	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Collection Log HOF", msg, "https://i.imgur.com/otTd8Dg.png")
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Pet HOF", msg, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
 		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
 	}
 
+	// We will now update the pet leaderboard
+	err = s.updatePetLeaderboard(ctx, session, coLog)
+	if err != nil {
+		logger.Error("Failed updating pet leaderboard: " + err.Error())
+		return err
+	}
+
 	logger.Info("Collection log hiscores update successful.")
+	return nil
+}
+
+func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.Session, coLog map[string]util.CollectionLogInfo) error {
+	logger := flume.FromContext(ctx)
+	logger.Info("Running pet hiscores update...")
+
+	petRanking := make([]string, 0, len(coLog))
+	for key := range coLog {
+		petRanking = append(petRanking, key)
+	}
+
+	// Sort the map based on the length of pets aka the number of unique pets
+	sort.SliceStable(petRanking, func(i, j int) bool {
+		return len(coLog[petRanking[i]].CollectionLog.Tabs.Other.AllPets.Items) > len(coLog[petRanking[j]].CollectionLog.Tabs.Other.AllPets.Items)
+	})
+
+	// First, delete all the messages within the channel
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscPetChan, "1200073192623059016")
+	if err != nil {
+		logger.Error("Failed to bulk delete discord messages: " + err.Error())
+	}
+
+	// Create the leaderboard message that will be sent
+	for placement, k := range petRanking {
+		placements := ""
+		if len(coLog[k].CollectionLog.Tabs.Other.AllPets.Items) == 0 {
+			break
+		}
+		placements = placements + " [" + strconv.Itoa(len(coLog[k].CollectionLog.Tabs.Other.AllPets.Items)) + "/58]\n\n"
+		for _, petInfo := range coLog[k].CollectionLog.Tabs.Other.AllPets.Items {
+			placements = placements + util.PetIconInfo[petInfo.Name]
+		}
+		placements = placements + " \n"
+
+		// Send the Discord Embed message for collection log
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscPetChan, "Rank "+strconv.Itoa(placement+1)+": "+k, placements, "")
+		if err != nil {
+			logger.Error("Failed to send discord emded message" + err.Error())
+			return err
+		}
+	}
+
+	// Send the Discord Embed message for instructions on how to get on the collection log hall of fame
+	var msg string
+	msg = msg + "1. Follow the instructions to turn on collection log: https://discord.com/channels/1172535371905646612/1196541219581460530\n"
+	msg = msg + "2. Ensure the All Pets section in other has been checked (there should be a * if you did not check it)\n"
+	msg = msg + "3. Upload collection log\n"
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscPetChan, "How To Get Onto The Pet HOF", msg, "https://i.imgur.com/otTd8Dg.png")
+	if err != nil {
+		logger.Error("Failed to send discord emded message" + err.Error())
+		return err
+	}
+
+	logger.Info("Pet hiscores update successful.")
+
 	return nil
 }
 
