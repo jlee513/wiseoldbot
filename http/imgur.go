@@ -51,13 +51,12 @@ func (i ImgurClient) Upload(ctx context.Context, AccessToken string, image io.Re
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		logger.Error("Error reading body: ", err)
-		panic(err)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(body))
 	var img util.ImageInfoDataWrapper
 	if err = dec.Decode(&img); err != nil {
-		panic(err)
+		logger.Error("Error decoding body: ", err)
 	}
 
 	return img.Ii.Link
@@ -81,7 +80,6 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 	req, err := http.NewRequest(http.MethodPost, i.refreshURL, bytes.NewBuffer(rawBody))
 	if err != nil {
 		logger.Error("Error while creating access token request: ", err.Error())
-		panic(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -94,7 +92,6 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("Error while reading access token response: ", err.Error())
-		panic(err)
 	}
 	defer resp.Body.Close()
 

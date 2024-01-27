@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"github.com/gemalto/flume"
 	"net/http"
 	"os"
 	"osrs-disc-bot/util"
@@ -15,14 +16,13 @@ import (
 )
 
 type GoogleSheetsClient struct {
-	client          *http.Client
-	cpSheet         string
-	cpScSheet       string
-	speedSheet      string
-	speedScSheet    string
-	tidSheet        string
-	members         string
-	discordChannels string
+	client       *http.Client
+	cpSheet      string
+	cpScSheet    string
+	speedSheet   string
+	speedScSheet string
+	tidSheet     string
+	members      string
 }
 
 func NewGoogleSheetsClient(config *util.Config) *GoogleSheetsClient {
@@ -34,7 +34,6 @@ func NewGoogleSheetsClient(config *util.Config) *GoogleSheetsClient {
 	client.speedScSheet = config.SheetsSpeedSC
 	client.tidSheet = config.SheetsTid
 	client.members = config.SheetsMembers
-	client.discordChannels = config.SheetsDiscordChannels
 	return client
 }
 
@@ -42,70 +41,22 @@ func NewGoogleSheetsClient(config *util.Config) *GoogleSheetsClient {
 prepGoogleSheet will read the credentials in the client_secret.json in order to retrieve the JWT that
 is used to fetch the spreadsheet. Once fetched, it is returned to whichever function needs it
 */
-func (g *GoogleSheetsClient) prepGoogleSheet(sheetId string) *spreadsheet.Sheet {
+func (g *GoogleSheetsClient) prepGoogleSheet(ctx context.Context, sheetId string) *spreadsheet.Sheet {
 	// Create the client with the correct JWT configuration
 	data, err := os.ReadFile("config/client_secret.json")
-	checkError(err)
+	checkError(ctx, err)
 	conf, err := google.JWTConfigFromJSON(data, spreadsheet.Scope)
-	checkError(err)
+	checkError(ctx, err)
 	client := conf.Client(context.TODO())
 
 	// Fetch the clan points google sheet
 	service := spreadsheet.NewServiceWithClient(client)
 	googlesheet, err := service.FetchSpreadsheet(sheetId)
-	checkError(err)
+	checkError(ctx, err)
 	sheet, err := googlesheet.SheetByIndex(0)
-	checkError(err)
+	checkError(ctx, err)
 
 	return sheet
-}
-
-func (g *GoogleSheetsClient) InitializeDiscordChannels(ctx context.Context, discChans map[string]string) {
-	sheet := g.prepGoogleSheet(g.discordChannels)
-
-	header := true
-
-	// Set the in memory cp map with the Google sheets information
-	for _, row := range sheet.Rows {
-		if header {
-			header = false
-			continue
-		}
-		isChannelName := true
-		channelName := ""
-		channelId := ""
-		for _, cell := range row {
-			if isChannelName {
-				channelName = cell.Value
-			} else {
-				channelId = strings.Replace(cell.Value, "ponies", "", -1)
-				break
-			}
-			isChannelName = false
-		}
-		discChans[channelName] = channelId
-	}
-}
-
-func (g *GoogleSheetsClient) UpdateDiscordChannels(ctx context.Context, discChans map[string]string) {
-	sheet := g.prepGoogleSheet(g.discordChannels)
-
-	// Delete all the values in the sheet before proceeding with the insertion of clan points
-	// We are deleting as this is an easier way of ensuring deleted people are removed from the
-	// sheets without adding additional logic
-
-	// Update the Google sheets information with the in memory cp map
-	row := 1
-
-	for channel, channelId := range discChans {
-		sheet.Update(row, 0, channel)
-		sheet.Update(row, 1, "ponies"+channelId)
-		row++
-	}
-
-	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
-	checkError(err)
 }
 
 /*
@@ -113,7 +64,7 @@ InitializeCpFromSheet will take all the clan points from the CP Google Sheet and
 cp map for use within the bot
 */
 func (g *GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[string]int) {
-	sheet := g.prepGoogleSheet(g.cpSheet)
+	sheet := g.prepGoogleSheet(ctx, g.cpSheet)
 
 	header := true
 
@@ -140,7 +91,7 @@ func (g *GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[s
 }
 
 func (g *GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, speeds map[string]util.SpeedInfo) {
-	sheet := g.prepGoogleSheet(g.speedSheet)
+	sheet := g.prepGoogleSheet(ctx, g.speedSheet)
 
 	header := true
 
@@ -201,13 +152,13 @@ func (g *GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, spee
 }
 
 func (g *GoogleSheetsClient) InitializeTIDFromSheet(ctx context.Context) int {
-	sheet := g.prepGoogleSheet(g.tidSheet)
+	sheet := g.prepGoogleSheet(ctx, g.tidSheet)
 	tid, _ := strconv.Atoi(sheet.Rows[0][0].Value)
 	return tid
 }
 
 func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, members map[string]util.MemberInfo) {
-	sheet := g.prepGoogleSheet(g.members)
+	sheet := g.prepGoogleSheet(ctx, g.members)
 
 	header := true
 
@@ -221,15 +172,16 @@ func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, mem
 			continue
 		}
 		player := ""
-		id := ""
+		id := 0
 		discordName := ""
 		feedback := ""
+		main := false
 		for col, cell := range row {
 			switch col {
 			case 0:
 				player = cell.Value
 			case 1:
-				id = strings.Replace(cell.Value, "ponies", "", -1)
+				id, _ = strconv.Atoi(strings.Replace(cell.Value, "ponies", "", -1))
 			case 2:
 				discordName = cell.Value
 			case 3:
@@ -239,12 +191,15 @@ func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, mem
 				} else {
 					foundFeedback[discordName] = feedback
 				}
+			case 4:
+				main, _ = strconv.ParseBool(cell.Value)
 			}
 		}
 		members[player] = util.MemberInfo{
 			DiscordId:   id,
 			DiscordName: discordName,
 			Feedback:    feedback,
+			Main:        main,
 		}
 	}
 
@@ -256,12 +211,13 @@ func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, mem
 				DiscordId:   members[player].DiscordId,
 				DiscordName: members[player].DiscordName,
 				Feedback:    foundFeedback[discordName],
+				Main:        members[player].Main,
 			}
 		}
 	}
 }
 func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo) {
-	sheet := g.prepGoogleSheet(g.members)
+	sheet := g.prepGoogleSheet(ctx, g.members)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
@@ -272,23 +228,24 @@ func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map
 
 	for user, memberInfo := range members {
 		sheet.Update(row, 0, user)
-		sheet.Update(row, 1, "ponies"+memberInfo.DiscordId)
+		sheet.Update(row, 1, "ponies"+strconv.Itoa(memberInfo.DiscordId))
 		sheet.Update(row, 2, memberInfo.DiscordName)
 		sheet.Update(row, 3, "ponies"+memberInfo.Feedback)
+		sheet.Update(row, 4, strconv.FormatBool(memberInfo.Main))
 		row++
 	}
 
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }
 
 func (g *GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
-	sheet := g.prepGoogleSheet(g.tidSheet)
+	sheet := g.prepGoogleSheet(ctx, g.tidSheet)
 	sheet.Update(0, 0, strconv.Itoa(tid))
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }
 
 /*
@@ -296,7 +253,7 @@ UpdateCpSheet will take the cp map that was being locally updated and save it to
 CP Google Sheets
 */
 func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]int) {
-	sheet := g.prepGoogleSheet(g.cpSheet)
+	sheet := g.prepGoogleSheet(ctx, g.cpSheet)
 
 	// Delete all the values in the sheet before proceeding with the insertion of clan points
 	// We are deleting as this is an easier way of ensuring deleted people are removed from the
@@ -324,7 +281,7 @@ func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]in
 
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }
 
 /*
@@ -336,7 +293,7 @@ func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscr
 	if len(cpscreenshots) == 0 {
 		return
 	}
-	sheet := g.prepGoogleSheet(g.cpScSheet)
+	sheet := g.prepGoogleSheet(ctx, g.cpScSheet)
 
 	// Append new rows into the sheets
 	startingRow := len(sheet.Rows)
@@ -349,12 +306,13 @@ func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscr
 
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }
 
-func checkError(err error) {
+func checkError(ctx context.Context, err error) {
+	logger := flume.FromContext(ctx)
 	if err != nil {
-		panic(err.Error())
+		logger.Error("Failed sheets call: " + err.Error())
 	}
 }
 
@@ -363,11 +321,11 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 	if len(speed) == 0 {
 		return
 	}
-	sheet := g.prepGoogleSheet(g.speedSheet)
+	sheet := g.prepGoogleSheet(ctx, g.speedSheet)
 
 	// Overwrite the rows
 	startingRow := 1
-	
+
 	for _, name := range util.HofOrder {
 		sheet.Update(startingRow, 0, name)
 		sheet.Update(startingRow, 1, speed[name].Time.Format("15:04:05.00"))
@@ -378,7 +336,7 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }
 
 func (g *GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo) {
@@ -386,7 +344,7 @@ func (g *GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, sp
 	if len(speedscreenshots) == 0 {
 		return
 	}
-	sheet := g.prepGoogleSheet(g.speedScSheet)
+	sheet := g.prepGoogleSheet(ctx, g.speedScSheet)
 
 	// Sort the map on keys so that we can have submission screenshots saved in order
 	keys := make([]string, 0, len(speedscreenshots))
@@ -409,5 +367,5 @@ func (g *GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, sp
 
 	// Make sure call Synchronize to reflect the changes
 	err := sheet.Synchronize()
-	checkError(err)
+	checkError(ctx, err)
 }

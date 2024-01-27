@@ -57,8 +57,13 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 	// Can only have either a screenshot or an imgur link
 	url := ""
 	if len(screenshot) == 0 && len(imgurUrl) == 0 {
-		logger.Error("No screenshot has been submitted")
-		return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		// If none of these are submitted, check to see if the image is dragged in as an attachment
+		if i.Message != nil && len(i.Message.Attachments) == 0 {
+			logger.Error("No screenshot has been submitted")
+			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		} else {
+			screenshot = i.Message.Attachments[0].ProxyURL
+		}
 	} else if len(screenshot) > 0 && len(imgurUrl) > 0 {
 		logger.Error("Two screenshots has been submitted")
 		return "Two images has been submitted - please provide either a screenshot or an imgur link in their respective sections, not both."
@@ -81,9 +86,20 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 	names := strings.Split(whitespaceStrippedMessage, ",")
 	for _, name := range names {
 		if _, ok := s.cp[name]; !ok {
+			// Check to see if one of the names is not a main
+			logger.Debug("Player " + name + " is not a main, determining main account...")
+			discordId := s.members[name].DiscordId
+
+			for user, member := range s.members {
+				if discordId == member.DiscordId && member.Main {
+					logger.Error("Player " + name + "'s main is: " + user + " - resubmit is required")
+					return "Player " + name + "'s main is: " + user + ". Please resubmit using the main username."
+				}
+			}
+
 			// We have a submission for an unknown person, throw an error
 			logger.Error("Unknown player submitted: " + name)
-			return "Unknown player submitted. Please ensure all the names are correct or sign-up the following person: " + name
+			return "Please ensure all the names are correct or sign-up the following person: " + name
 		}
 	}
 
@@ -147,7 +163,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 		index = strings.Index(msg.Content, "User Id:")
 		index2 = strings.Index(msg.Content, "Boss Name:")
-		submitterId := msg.Content[index+9 : index2-1]
+		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		index = strings.Index(msg.Content, "Name:")
 		index2 = strings.Index(msg.Content, "Time:")
@@ -184,7 +200,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			defer resp.Body.Close()
 
 			// Retrieve the access token
-			accessToken, err := s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+			accessToken, err := s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
 			if err != nil {
 				logger.Debug("Failed to get imgur access token, will retry...")
 				// We will retry 10 times to get a new access token
@@ -195,7 +211,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 						logger.Error("Failed to get access token for imgur: " + err.Error())
 						return
 					}
-					accessToken, err = s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+					accessToken, err = s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
 					if err != nil {
 						counter++
 						continue
@@ -204,7 +220,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 					}
 				}
 			}
-			submissionUrl = s.imgur.Upload(ctx, accessToken, resp.Body)
+			submissionUrl = s.imageservice.Upload(ctx, accessToken, resp.Body)
 		}
 		submissionTime := time.Now().Format("2006-01-02 15:04:05")
 		s.speedscreenshots[submissionTime] = util.SpeedScInfo{BossName: bossName, Time: speedTime, PlayersInvolved: playersInvolved, URL: submissionUrl}
@@ -221,7 +237,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			oldTimePlayers := strings.Split(util.WhiteStripCommas(s.speed[bossName].PlayersInvolved), ",")
 
 			for _, player := range newTimePlayers {
-				newTimeMsg = newTimeMsg + "<@" + s.members[player].DiscordId + ">,"
+				newTimeMsg = newTimeMsg + "<@" + strconv.Itoa(s.members[player].DiscordId) + ">,"
 			}
 			newTimeMsg = newTimeMsg[:len(newTimeMsg)-1]
 			newTimeMsg = newTimeMsg + " has beaten "
@@ -231,7 +247,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 					newTimeMsg = newTimeMsg + "null,"
 					continue
 				}
-				newTimeMsg = newTimeMsg + "<@" + s.members[player].DiscordId + ">,"
+				newTimeMsg = newTimeMsg + "<@" + strconv.Itoa(s.members[player].DiscordId) + ">,"
 			}
 			newTimeMsg = newTimeMsg[:len(newTimeMsg)-1]
 			newTimeMsg = newTimeMsg + "!\nOld time: " + s.speed[bossName].Time.Format("15:04:05.00") + "\nNew Time: " + t.Format("15:04:05.00") + fmt.Sprintf("\n%s", submissionUrl)
@@ -267,7 +283,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Boss Name:")
-		feedBackMsg := "<@" + submitterId + ">\nYour speed submission has been accepted\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour speed submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -283,12 +299,12 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 		index = strings.Index(msg.Content, "User Id:")
 		index2 = strings.Index(msg.Content, "Boss Name:")
-		submitterId := msg.Content[index+9 : index2-1]
+		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Boss Name:")
-		feedBackMsg := "<@" + submitterId + ">\nYour speed submission has been rejected\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour speed submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)

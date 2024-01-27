@@ -6,6 +6,7 @@ import (
 	"github.com/gemalto/flume"
 	"log"
 	"osrs-disc-bot/util"
+	"strconv"
 	"strings"
 )
 
@@ -129,6 +130,10 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 									Name:  "Name Change",
 									Value: "Name Change",
 								},
+								{
+									Name:  "Update Main",
+									Value: "Update Main",
+								},
 							},
 						},
 						{
@@ -140,7 +145,7 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
 							Name:        "discord-id",
-							Description: "Player discord id",
+							Description: "Player discord id (this is a number)",
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -151,6 +156,11 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 							Type:        discordgo.ApplicationCommandOptionString,
 							Name:        "new-name",
 							Description: "New player name",
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionBoolean,
+							Name:        "main",
+							Description: "Is this the main account?",
 						},
 					},
 				},
@@ -327,7 +337,7 @@ func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.Me
 	}
 }
 
-func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *discordgo.Session, user, userId, name string) string {
+func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *discordgo.Session, user string, userId int, name string) string {
 	logger := flume.FromContext(ctx)
 
 	if len(name) > 0 {
@@ -354,7 +364,7 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 	}
 
 	// Ensure that the user & userid is filled in before proceeding to create the channel
-	if len(user) == 0 || len(userId) == 0 {
+	if len(user) == 0 || userId == 0 {
 		user = s.members[name].DiscordName
 		userId = s.members[name].DiscordId
 	}
@@ -365,7 +375,7 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 		Type: discordgo.ChannelTypeGuildText,
 		PermissionOverwrites: []*discordgo.PermissionOverwrite{
 			{
-				ID:    userId,
+				ID:    strconv.Itoa(userId),
 				Type:  discordgo.PermissionOverwriteTypeMember,
 				Allow: discordgo.PermissionAllText,
 			},
