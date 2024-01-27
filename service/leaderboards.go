@@ -271,7 +271,13 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	msg = msg + "3. Click through your collection log in game (there will be a * next to the one you still need to click)\n"
 	msg = msg + "4. Go to the collection log icon on the sidebar\n"
 	msg = msg + "5. Click Account at the top and then upload collection log\n"
-	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Pet HOF", msg, "https://i.imgur.com/otTd8Dg.png")
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Collection Log HOF", msg, "https://i.imgur.com/otTd8Dg.png")
+	if err != nil {
+		logger.Error("Failed to send discord emded message" + err.Error())
+		return err
+	}
+
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "Steps To Reset Collection Log Locally", "https://i.imgur.com/2LT9Qby.png", "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
 		logger.Error("Failed to send discord emded message" + err.Error())
 		return err
@@ -314,7 +320,7 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 		if len(coLog[k].CollectionLog.Tabs.Other.AllPets.Items) == 0 {
 			break
 		}
-		placements = placements + " [" + strconv.Itoa(len(coLog[k].CollectionLog.Tabs.Other.AllPets.Items)) + "/58]\n\n"
+		placements = placements + " [" + strconv.Itoa(len(coLog[k].CollectionLog.Tabs.Other.AllPets.Items)) + "/57]\n\n"
 		for _, petInfo := range coLog[k].CollectionLog.Tabs.Other.AllPets.Items {
 			placements = placements + util.PetIconInfo[petInfo.Name]
 		}

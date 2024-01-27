@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"github.com/TwiN/go-pastebin"
+	"github.com/gemalto/flume"
 	"net/http"
 	"osrs-disc-bot/util"
 	"strings"
@@ -46,7 +47,7 @@ func NewPastebinClient(pastebinUsername, pastebinPassword, pastebinDevApiKey, pa
 func (p *PastebinClient) UpdateGuideList(ctx context.Context, pastebinGuides map[string][]util.GuideInfo) {
 	pasteContent, err := p.pastebinClient.GetUserPasteContent(p.pastebinMainPasteKey)
 	if err != nil {
-		panic(err)
+		flume.FromContext(ctx).Error("Failed to get user pastebin content: " + err.Error())
 	}
 
 	// Ensure everything gets deleted when updating
@@ -83,7 +84,7 @@ func (p *PastebinClient) UpdateGuideList(ctx context.Context, pastebinGuides map
 func (p *PastebinClient) GetGuide(ctx context.Context, guideKey string) string {
 	pasteContent, err := p.pastebinClient.GetUserPasteContent(guideKey)
 	if err != nil {
-		panic(err)
+		flume.FromContext(ctx).Error("Failed to get paste content: " + err.Error())
 	}
 	return strings.Replace(pasteContent, "\r", "", -1)
 }

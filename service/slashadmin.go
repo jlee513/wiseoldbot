@@ -82,19 +82,14 @@ func (s *Service) resetSpeedAdmin(session *discordgo.Session, i *discordgo.Inter
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
-		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
-		returnMessage := s.resetSpeedAdminCommand(ctx, session, i)
-		err := util.InteractionRespond(session, i, returnMessage)
-		if err != nil {
-			logger.Error("Failed to send admin interaction response: " + err.Error())
-		}
+		s.resetSpeedAdminCommand(ctx, session, i)
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		s.resetSpeedAdminAutocomplete(session, i)
 	}
 }
 
-func (s *Service) resetSpeedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) resetSpeedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	options := i.ApplicationCommandData().Options[0].Options
 	logger := flume.FromContext(ctx)
 
@@ -112,19 +107,20 @@ func (s *Service) resetSpeedAdminCommand(ctx context.Context, session *discordgo
 
 	logger.Info("Resetting speed for: " + boss)
 
+	err := util.InteractionRespond(session, i, "Resetting speed for: "+boss)
+	if err != nil {
+		logger.Error("Failed to send admin interaction response: " + err.Error())
+	}
+
 	// Ensure the boss name is okay
 	if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
 		logger.Error("Incorrect boss name: ", boss)
-		return "Incorrect boss name. Please look ensure to select one of the options for boss names."
 	}
 
 	// Convert the time string into time
 	t := util.CalculateTime("22:22:22.60")
 	s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
 	s.updateSpeedHOF(ctx, session, category)
-
-	// If nothing wrong happened, send a happy message back to the submitter
-	return "Successfully reset speed for " + boss + "!"
 }
 
 func (s *Service) resetSpeedAdminAutocomplete(session *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -273,8 +269,9 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 	option := ""
 	name := ""
 	newName := ""
-	discordid := ""
+	discordid := 0
 	discordname := ""
+	main := false
 
 	for _, iterOption := range options {
 		switch iterOption.Name {
@@ -285,32 +282,68 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 		case "new-name":
 			newName = iterOption.Value.(string)
 		case "discord-id":
-			discordid = iterOption.Value.(string)
+			discordidStr := iterOption.Value.(string)
+			var err error
+			discordid, err = strconv.Atoi(discordidStr)
+			if err != nil {
+				msg := "Discord ID needs to be a number!"
+				return msg
+			}
 		case "discord-name":
 			discordname = iterOption.Value.(string)
+		case "main":
+			main = iterOption.Value.(bool)
 		}
 	}
 
 	switch option {
 	case "Add":
 		// If add, ensure that discord-id and discord-name are there
-		if len(discordid) == 0 || len(discordname) == 0 {
+		if discordid == 0 || len(discordname) == 0 {
 			logger.Error("Discord ID and Discord Name are required for an addition to the clan")
 			msg := "Discord ID and Discord Name are required for an addition to the clan"
 			return msg
 		}
 
-		// Ensure that this person does not exist in the cp map currently
-		if _, ok := s.cp[name]; ok {
+		// Ensure that this person does not exist in the members map
+		if _, ok := s.members[name]; ok {
 			// Send the failed addition message in the previously created private channel
 			logger.Error("Member: " + name + " already exists.")
 			msg := "Member: " + name + " already exists."
 			return msg
 		} else {
-			s.cp[name] = 0
+			existingMember := false
+			for _, member := range s.members {
+				if member.DiscordId == discordid {
+					existingMember = true
+					break
+				}
+			}
+
+			// Ensure that if it's the first account being added for a particular discord user, it has to be a main
+			if !existingMember && !main {
+				// Send the failed addition message in the previously created private channel
+				logger.Error("First member for the discord user: " + discordname + ". This is required to be a main.")
+				msg := "First member for the discord user: " + discordname + ". This is required to be a main."
+				return msg
+			}
+
+			// Ensure there can only be 1 main at a time
+			if existingMember && main {
+				// Send the failed addition message in the previously created private channel
+				logger.Error("There can only be 1 main at a time per user: " + discordname)
+				msg := "There can only be 1 main at a time per user: " + discordname
+				return msg
+			}
+
+			// Only add a clan point entry for a main
+			if main {
+				s.cp[name] = 0
+			}
 			s.members[name] = util.MemberInfo{
 				DiscordId:   discordid,
 				DiscordName: discordname,
+				Main:        main,
 			}
 			s.temple.AddMemberToTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 
@@ -322,9 +355,41 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 		// Remove the user from the temple page
 		s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 
-		if _, ok := s.cp[name]; ok {
-			delete(s.cp, name)
-			delete(s.members, name)
+		if _, ok := s.members[name]; ok {
+			// If the account we're deleting is a main, check to see if there are any other accounts for this discord user
+			// If there is, just assign the first instance as main - if not, just delete
+			if s.members[name].Main {
+				logger.Debug("Deleting player is a main, searching for another account to become main...")
+				discordId := s.members[name].DiscordId
+				delete(s.members, name)
+				for user, member := range s.members {
+					if discordId == member.DiscordId {
+						logger.Debug("Found new main: " + user + ". Using as new main for user: " + s.members[user].DiscordName)
+						s.members[user] = util.MemberInfo{
+							DiscordId:   s.members[user].DiscordId,
+							DiscordName: s.members[user].DiscordName,
+							Feedback:    s.members[user].Feedback,
+							Main:        true,
+						}
+						s.cp[user] = s.cp[name]
+
+						// Update HOF Speed times from deleted user to new main user
+						updatedSpeedInfo := make(map[string]util.SpeedInfo)
+						for boss, speedInfo := range s.speed {
+							updatedSpeedInfo[boss] = util.SpeedInfo{
+								PlayersInvolved: strings.Replace(speedInfo.PlayersInvolved, name, newName, -1),
+								Time:            speedInfo.Time,
+								URL:             speedInfo.URL,
+							}
+						}
+						s.speed = updatedSpeedInfo
+					}
+				}
+				delete(s.cp, name)
+			} else {
+				delete(s.members, name)
+				delete(s.cp, name)
+			}
 
 			logger.Debug("You have successfully removed a member: " + name)
 			msg := "You have successfully removed a member: " + name
@@ -337,7 +402,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			return msg
 		}
 	case "Name Change":
-		if _, ok := s.cp[name]; ok {
+		if _, ok := s.members[name]; ok {
 			// Remove the user from the temple page and add new name
 			s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 			s.temple.AddMemberToTemple(ctx, newName, s.config.TempleGroupId, s.config.TempleGroupKey)
@@ -368,10 +433,60 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			msg := "Member: " + name + " does not exist."
 			return msg
 		}
+	case "Update Main":
+		// Ensure it is a main first
+		if _, ok := s.cp[name]; !ok {
+			logger.Error("Name: " + name + " is not a main")
+			msg := "Name: " + name + " is not a main. Ensure a main is used in the name section and the transferring name (not a main) is in the new-name section"
+			return msg
+		} else if _, ok := s.cp[newName]; ok {
+			// Ensure the new-name is not a main
+			logger.Error("New Name: " + newName + " is a main")
+			msg := "New Name: " + newName + " is a main. Ensure a main is used in the name section and the transferring name (not a main) is in the new-name section"
+			return msg
+		}
 
-	default:
-		return "Invalid player management option chosen."
+		// Ensure the name and newName belong to the same discord user
+		if s.members[name].DiscordId != s.members[newName].DiscordId {
+			logger.Error("Main: " + name + " and New Main: " + newName + " do not belong to the same discord id.")
+			msg := "Main: " + name + " and New Main: " + newName + " do not belong to the same discord id."
+			return msg
+		}
+
+		// Use the new name as the clan points owner
+		s.cp[newName] = s.cp[name]
+		delete(s.cp, name)
+
+		// Set the main to true for the newName and set main to false for name
+		s.members[name] = util.MemberInfo{
+			DiscordId:   s.members[name].DiscordId,
+			DiscordName: s.members[name].DiscordName,
+			Feedback:    s.members[name].Feedback,
+			Main:        false,
+		}
+		s.members[newName] = util.MemberInfo{
+			DiscordId:   s.members[newName].DiscordId,
+			DiscordName: s.members[newName].DiscordName,
+			Feedback:    s.members[newName].Feedback,
+			Main:        true,
+		}
+
+		// Update HOF Speed times from name to new name
+		updatedSpeedInfo := make(map[string]util.SpeedInfo)
+		for boss, speedInfo := range s.speed {
+			updatedSpeedInfo[boss] = util.SpeedInfo{
+				PlayersInvolved: strings.Replace(speedInfo.PlayersInvolved, name, newName, -1),
+				Time:            speedInfo.Time,
+				URL:             speedInfo.URL,
+			}
+		}
+		s.speed = updatedSpeedInfo
+		logger.Debug("You have successfully updated main from: " + name + " to: " + newName)
+		msg := "You have successfully updated main from: " + name + " to: " + newName
+		return msg
 	}
+
+	return "Invalid player management option chosen."
 }
 
 func (s *Service) updatePPPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {

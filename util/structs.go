@@ -85,9 +85,10 @@ type Config struct {
 }
 
 type MemberInfo struct {
-	DiscordId   string `json:"discordId"`
+	DiscordId   int    `json:"discordId"`
 	DiscordName string `json:"discordName"`
 	Feedback    string `json:"feedback"`
+	Main        bool   `json:"main"`
 }
 
 type SpeedInfo struct {

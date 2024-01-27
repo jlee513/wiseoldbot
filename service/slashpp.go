@@ -6,6 +6,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
+	"strconv"
 	"strings"
 )
 
@@ -34,8 +35,13 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 	// Can only have either a screenshot or an imgur link
 	url := ""
 	if len(screenshot) == 0 && len(imgurUrl) == 0 {
-		logger.Error("No screenshot has been submitted")
-		return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		// If none of these are submitted, check to see if the image is dragged in as an attachment
+		if i.Message != nil && len(i.Message.Attachments) == 0 {
+			logger.Error("No screenshot has been submitted")
+			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		} else {
+			screenshot = i.Message.Attachments[0].ProxyURL
+		}
 	} else if len(screenshot) > 0 && len(imgurUrl) > 0 {
 		logger.Error("Two screenshots has been submitted")
 		return "Two images has been submitted - please provide either a screenshot or an imgur link in their respective sections, not both."
@@ -56,11 +62,25 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 	whitespaceStrippedMessage := util.WhiteStripCommas(playersInvolved)
 	logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 	names := strings.Split(whitespaceStrippedMessage, ",")
+	var checkedNames []string
 	for _, name := range names {
 		if _, ok := s.cp[name]; !ok {
+			// Check to see if one of the names is not a main
+			logger.Debug("Player " + name + " is not a main, determining main account...")
+			discordId := s.members[name].DiscordId
+
+			for user, member := range s.members {
+				if discordId == member.DiscordId && member.Main {
+					logger.Error("Player " + name + "'s main is: " + user + " - resubmit is required")
+					return "Player " + name + "'s main is: " + user + ". Please resubmit using the main username."
+				}
+			}
+
 			// We have a submission for an unknown person, throw an error
 			logger.Error("Unknown player submitted: " + name)
-			return "Unknown player submitted. Please ensure all the names are correct or sign-up the following person: " + name
+			return "Please ensure all the names are correct or sign-up the following person: " + name
+		} else {
+			checkedNames = append(checkedNames, name)
 		}
 	}
 
@@ -95,7 +115,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 
 		index = strings.Index(msg.Content, "User Id:")
 		index2 = strings.Index(msg.Content, "Players Involved:")
-		submitterId := msg.Content[index+9 : index2-1]
+		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		index = strings.Index(msg.Content, "Involved:")
 		index2 = strings.Index(msg.Content, "https://")
@@ -124,7 +144,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 			defer resp.Body.Close()
 
 			// Retrieve the access token
-			accessToken, err := s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+			accessToken, err := s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
 			if err != nil {
 				// We will retry 10 times to get a new access token
 				counter := 0
@@ -133,7 +153,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 						logger.Error("Failed to get access token for imgur: " + err.Error())
 						return
 					}
-					accessToken, err = s.imgur.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+					accessToken, err = s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
 					if err != nil {
 						counter++
 					} else {
@@ -141,7 +161,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 					}
 				}
 			}
-			submissionUrl = s.imgur.Upload(ctx, accessToken, resp.Body)
+			submissionUrl = s.imageservice.Upload(ctx, accessToken, resp.Body)
 		}
 
 		s.cpscreenshots[submissionUrl] = playersInvolved
@@ -159,7 +179,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + submitterId + ">\nYour ponies point submission has been accepted\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour ponies point submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
@@ -175,12 +195,12 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 
 		index = strings.Index(msg.Content, "User Id:")
 		index2 = strings.Index(msg.Content, "Players Involved:")
-		submitterId := msg.Content[index+9 : index2-1]
+		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + submitterId + ">\nYour ponies point submission has been rejected\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour ponies point submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)

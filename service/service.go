@@ -19,7 +19,7 @@ import (
 type Service struct {
 	collectionLog collectionLog
 	sheets        sheets
-	imgur         imgur
+	imageservice  imageservice
 	temple        temple
 	runescape     runescape
 	pastebin      pastebin
@@ -41,7 +41,7 @@ type Service struct {
 	scheduler *gocron.Scheduler
 }
 
-func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imgur imgur, temple temple, runescape runescape, pastebin pastebin) *Service {
+func NewService(config *util.Config, collectionLog collectionLog, sheets sheets, imageservice imageservice, temple temple, runescape runescape, pastebin pastebin) *Service {
 	logger := flume.New("service")
 	if config.LogDebug {
 		_ = flume.Configure(flume.Config{Development: true, Levels: "*"})
@@ -54,7 +54,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 	return &Service{
 		collectionLog: collectionLog,
 		sheets:        sheets,
-		imgur:         imgur,
+		imageservice:  imageservice,
 		temple:        temple,
 		runescape:     runescape,
 		pastebin:      pastebin,
