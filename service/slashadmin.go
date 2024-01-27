@@ -345,8 +345,9 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				DiscordName: discordname,
 				Main:        main,
 			}
-			s.temple.AddMemberToTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
 
+			s.temple.AddMemberToTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
+			s.templeUsernames[strings.ToLower(name)] = name
 			logger.Debug("You have successfully added a new member: " + name)
 			msg := "You have successfully added a new member: " + name
 			return msg
@@ -419,6 +420,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			s.speed = updatedSpeedInfo
 			s.members[newName] = s.members[name]
 			s.cp[newName] = s.cp[name]
+			s.templeUsernames[strings.ToLower(newName)] = newName
 			delete(s.cp, name)
 			delete(s.members, name)
 

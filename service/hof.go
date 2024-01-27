@@ -7,6 +7,7 @@ import (
 	"osrs-disc-bot/util"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -51,7 +52,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 
 			// Go through the rankings and determine whether they are a main or not
 			for ranking := range rankings {
-				member := s.members[kcs.Data.Players[ranking].Username]
+				member := s.members[s.templeUsernames[strings.ToLower(kcs.Data.Players[ranking].Username)]]
 				// If they are a main, check to see if there are any alts there already calculated
 				if member.Main {
 					// If it exists within alt kcs, add it to the current member and delete it from alt kcs
@@ -106,15 +107,15 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 				case 0:
 					placements = placements + ":first_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 3)
-					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
 				case 1:
 					placements = placements + ":second_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 2)
-					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
 				case 2:
 					placements = placements + ":third_place: "
 					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 1)
-					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
 				}
 			}
 

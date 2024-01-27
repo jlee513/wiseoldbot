@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"osrs-disc-bot/util"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,6 +32,7 @@ type Service struct {
 	log              flume.Logger
 	tid              int
 	members          map[string]util.MemberInfo
+	templeUsernames  map[string]string
 	discGuides       map[string][]util.GuideInfo
 
 	registeredCommands []*discordgo.ApplicationCommand
@@ -66,6 +68,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		log:              logger,
 		tid:              1,
 		members:          make(map[string]util.MemberInfo),
+		templeUsernames:  make(map[string]string),
 		discGuides:       make(map[string][]util.GuideInfo),
 
 		config: config,
@@ -84,6 +87,12 @@ func (s *Service) StartDiscordIRC() {
 	s.sheets.InitializeMembersFromSheet(ctx, s.members)
 	s.pastebin.UpdateGuideList(ctx, s.discGuides)
 	s.tid = s.sheets.InitializeTIDFromSheet(ctx)
+
+	// Set templeUsernames to all lowercase to avoid issues with capitalization's and preserve original username
+	// capitalization for HOF and other leaderboards
+	for name := range s.members {
+		s.templeUsernames[strings.ToLower(name)] = name
+	}
 
 	// Create a new discord session
 	session, err := discordgo.New("Bot " + s.config.DiscBotToken)
