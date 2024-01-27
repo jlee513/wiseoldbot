@@ -5,6 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
+	"sort"
 	"strconv"
 )
 
@@ -42,27 +43,83 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 
 		// Now add all the bosses
 		for _, bossInfo := range requestInfo.Bosses {
-			podium, rankings := s.temple.GetPodiumFromTemple(ctx, bossInfo.BossName)
+			kcs, rankings := s.temple.GetKCsFromTemple(ctx, bossInfo.BossName)
+
+			// Group all the kcs under main players
+			mainKcs := make(map[int]util.Player)
+			altKcs := make(map[int]util.Player)
+
+			// Go through the rankings and determine whether they are a main or not
+			for ranking := range rankings {
+				member := s.members[kcs.Data.Players[ranking].Username]
+				// If they are a main, check to see if there are any alts there already calculated
+				if member.Main {
+					// If it exists within alt kcs, add it to the current member and delete it from alt kcs
+					if _, ok := altKcs[member.DiscordId]; ok {
+						updatedMemberKcs := util.Player{
+							Username: kcs.Data.Players[ranking].Username,
+							Kc:       kcs.Data.Players[ranking].Kc + altKcs[member.DiscordId].Kc,
+						}
+						mainKcs[member.DiscordId] = updatedMemberKcs
+						delete(altKcs, member.DiscordId)
+					} else {
+						// If it doesn't exist, just set the mainKcs object with the member object
+						mainKcs[member.DiscordId] = kcs.Data.Players[ranking]
+					}
+				} else {
+					// If it exists within the main kcs, add to it
+					if _, ok := mainKcs[member.DiscordId]; ok {
+						updatedMemberKcs := util.Player{
+							Username: mainKcs[member.DiscordId].Username,
+							Kc:       kcs.Data.Players[ranking].Kc + mainKcs[member.DiscordId].Kc,
+						}
+						mainKcs[member.DiscordId] = updatedMemberKcs
+					} else if _, ok := altKcs[member.DiscordId]; ok {
+						// Check to see if an altKcs exists - if it does, add it to that
+						updatedMemberKcs := util.Player{
+							Username: altKcs[member.DiscordId].Username,
+							Kc:       kcs.Data.Players[ranking].Kc + altKcs[member.DiscordId].Kc,
+						}
+						altKcs[member.DiscordId] = updatedMemberKcs
+					} else {
+						// Otherwise, just add it to altKcs
+						altKcs[member.DiscordId] = kcs.Data.Players[ranking]
+					}
+				}
+			}
+
+			// Re-assign rankings for mainKcs
+			updatedRankings := make([]int, 0, len(mainKcs))
+
+			for key := range mainKcs {
+				updatedRankings = append(updatedRankings, key)
+			}
+
+			sort.SliceStable(updatedRankings, func(i, j int) bool {
+				return mainKcs[updatedRankings[i]].Kc > mainKcs[updatedRankings[j]].Kc
+			})
 
 			// Iterate over the players to get the different places for users to create the placements
 			placements := ""
-			for _, k := range rankings {
-				switch k {
-				case 1:
+			for placement, updatedRank := range updatedRankings {
+				switch placement {
+				case 0:
 					placements = placements + ":first_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 3)
-				case 2:
+					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 3)
+					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+				case 1:
 					placements = placements + ":second_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 2)
-				case 3:
+					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 2)
+					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+				case 2:
 					placements = placements + ":third_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, podium.Data.Players[k].Username, 1)
+					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 1)
+					placements = placements + mainKcs[updatedRank].Username + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
 				}
-				placements = placements + podium.Data.Players[k].Username + " [" + strconv.Itoa(podium.Data.Players[k].Kc) + "]\n"
 			}
 
 			// Beautify some names
-			bossName := podium.Data.BossName
+			bossName := kcs.Data.BossName
 			switch bossName {
 			case "Clue_beginner":
 				bossName = "Beginner Clue"
@@ -89,7 +146,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 			// Send the Discord Embed message for the boss podium finish
 			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, placements, bossInfo.ImageLink)
 			if err != nil {
-				logger.Error("Failed to send message for boss: " + podium.Data.BossName)
+				logger.Error("Failed to send message for boss: " + kcs.Data.BossName)
 				return
 			}
 		}

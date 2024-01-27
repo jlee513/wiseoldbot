@@ -33,7 +33,7 @@ type sheets interface {
 type temple interface {
 	AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string)
 	RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string)
-	GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
+	GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
 }
 
 type runescape interface {

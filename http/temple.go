@@ -26,7 +26,7 @@ func NewTempleClient() *TempleClient {
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.addApiURL = "https://templeosrs.com/api/add_group_member.php"
 	client.removeApiURL = "https://templeosrs.com/api/remove_group_member.php"
-	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=2291&count=3&skill="
+	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=2291&skill="
 	return client
 }
 
@@ -70,10 +70,10 @@ func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMembe
 }
 
 /*
-GetPodiumFromTemple will take in the bossid and make a request to temple to get the top 3 players
-from our group with the highest kc
+GetKCsFromTemple will take in the bossid and make a request to temple to get the kc of all the players
+from our group
 */
-func (t *TempleClient) GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+func (t *TempleClient) GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
 	logger := flume.FromContext(ctx)
 
 	resp, err := t.client.Get(t.podiumApiURL + bossIdForTemple)
