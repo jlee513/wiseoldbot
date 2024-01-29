@@ -269,7 +269,6 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
 		}
-		logger.Debug("ADDING COMMAND: " + v.Name)
 		s.registeredCommands[i] = cmd
 	}
 }

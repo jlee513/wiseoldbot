@@ -65,6 +65,7 @@ type Config struct {
 	DiscLeaguesChan        string `mapstructure:"DISCORD_LEAGUES_CHANNEL"`
 	DiscHOFLeaderboardChan string `mapstructure:"DISCORD_HOF_LEADERBOARD_CHANNEL"`
 	DiscNewFastestTimeChan string `mapstructure:"DISCORD_NEW_FASTEST_TIME_CHANNEL"`
+	DiscTempleMilestones   string `mapstructure:"DISCORD_TEMPLE_MILESTONES"`
 
 	// SPEED
 	DiscSpeedTzhaarChan    string `mapstructure:"DISCORD_SPEED_TZHAAR_CHANNEL"`
@@ -117,6 +118,15 @@ type HallOfFameInfo struct {
 	Data struct {
 		BossName string         `json:"skill"`
 		Players  map[int]Player `json:"players"`
+	} `json:"data"`
+}
+
+type MilestoneInfo struct {
+	Data []struct {
+		Username string `json:"Username"`
+		Skill    string `json:"Skill"`
+		Xp       int    `json:"Xp"`
+		Type     string `json:"Type"`
 	} `json:"data"`
 }
 

@@ -34,6 +34,7 @@ type temple interface {
 	AddMemberToTemple(ctx context.Context, addingMember string)
 	RemoveMemberFromTemple(ctx context.Context, removingMember string)
 	GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
+	GetMilestonesFromTemple(ctx context.Context) *util.MilestoneInfo
 }
 
 type runescape interface {

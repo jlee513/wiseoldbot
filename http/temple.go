@@ -15,12 +15,13 @@ import (
 )
 
 type TempleClient struct {
-	client         *http.Client
-	addApiURL      string
-	removeApiURL   string
-	podiumApiURL   string
-	templeGroupId  string
-	templeGroupKey string
+	client          *http.Client
+	addApiURL       string
+	removeApiURL    string
+	podiumApiURL    string
+	milestoneApiURL string
+	templeGroupId   string
+	templeGroupKey  string
 }
 
 func NewTempleClient(templeGroupId, templeGroupKey string) *TempleClient {
@@ -29,6 +30,7 @@ func NewTempleClient(templeGroupId, templeGroupKey string) *TempleClient {
 	client.addApiURL = "https://templeosrs.com/api/add_group_member.php"
 	client.removeApiURL = "https://templeosrs.com/api/remove_group_member.php"
 	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=" + templeGroupId + "&skill="
+	client.milestoneApiURL = "https://templeosrs.com/api/group_achievements.php?id=" + templeGroupId
 	client.templeGroupId = templeGroupId
 	client.templeGroupKey = templeGroupKey
 	return client
@@ -113,4 +115,35 @@ func (t *TempleClient) GetKCsFromTemple(ctx context.Context, bossIdForTemple str
 	}
 
 	return nil, nil
+}
+
+func (t *TempleClient) GetMilestonesFromTemple(ctx context.Context) *util.MilestoneInfo {
+	logger := flume.FromContext(ctx)
+
+	resp, err := t.client.Get(t.milestoneApiURL)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error while retrieving milestones from temple API"), err.Error())
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error("Error while reading response from temple: ", err.Error())
+			return nil
+		}
+
+		// Unmarshal into hallOfFameInfo struct
+		var f util.MilestoneInfo
+		err = json.Unmarshal(bodyBytes, &f)
+		if err != nil {
+			logger.Error("Error parsing JSON: ", err.Error())
+			return nil
+		}
+
+		return &f
+	}
+
+	return nil
 }

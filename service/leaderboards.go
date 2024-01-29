@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"osrs-disc-bot/util"
 	"sort"
 	"strconv"
@@ -68,6 +70,14 @@ func (s *Service) updateLeaderboardCommand(session *discordgo.Session, i *discor
 		}
 		// If kc is updating, always update all of them
 		s.updateColLog(ctx, session)
+	case "Milestones":
+		logger.Info("Admin invoked Milestones Update: ", i.Member.User.Username)
+		err := util.InteractionRespond(session, i, "Updating Milestones: "+threadName)
+		if err != nil {
+			logger.Error("Failed to send interaction response: " + err.Error())
+		}
+		// If kc is updating, always update all of them
+		s.updateTempleMilestones(ctx, session)
 	default:
 		err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
 		if err != nil {
@@ -95,6 +105,10 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 				Name:  "Leaderboard",
 				Value: "Leaderboard",
 			},
+			{
+				Name:  "Milestones",
+				Value: "Milestones",
+			},
 		}
 	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
 	case data.Options[0].Options[1].Focused:
@@ -119,6 +133,11 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
 				Name:  "Collection Log",
 				Value: "Collection Log",
+			})
+		case "Milestones":
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  "Temple",
+				Value: "Temple",
 			})
 		}
 	}
@@ -348,6 +367,122 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 	logger.Info("Pet hiscores update successful.")
 
 	return nil
+}
+
+func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo.Session) {
+	logger := flume.FromContext(ctx)
+	logger.Info("Running Temple Milestones update.")
+
+	// First, delete all the messages within the channel
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscTempleMilestones)
+	if err != nil {
+		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+	}
+
+	milestones := s.temple.GetMilestonesFromTemple(ctx)
+
+	pvm := ""
+	skill := ""
+	clues := ""
+	ehb := ""
+	ehp := ""
+	lms := ""
+
+	for _, milestone := range milestones.Data {
+		if strings.Contains(milestone.Skill, "Clue_") {
+			milestone.Type = "Clue"
+		} else if strings.Contains(milestone.Skill, "Ehb") {
+			milestone.Type = "EHB"
+		} else if strings.Contains(milestone.Skill, "Ehp") {
+			milestone.Type = "EHP"
+		} else if strings.Contains(milestone.Skill, "LMS") {
+			milestone.Type = "LMS"
+		}
+		switch milestone.Type {
+		case "Pvm":
+			pvm = pvm + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " kills\n"
+		case "Skill":
+			p := message.NewPrinter(language.English)
+			skill = skill + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + p.Sprintf("%d", milestone.Xp) + " in " + milestone.Skill + "\n"
+		case "Clue":
+			// Beautify some names
+			clueName := ""
+			switch milestone.Skill {
+			case "Clue_beginner":
+				clueName = "Beginner Clues"
+			case "Clue_easy":
+				clueName = "Easy Clues"
+			case "Clue_medium":
+				clueName = "Medium Clues"
+			case "Clue_hard":
+				clueName = "Hard Clues"
+			case "Clue_elite":
+				clueName = "Elite Clues"
+			case "Clue_master":
+				clueName = "Master Clues"
+			case "Clue_all":
+				clueName = "All Clues"
+				clues = clues + s.templeUsernames[strings.ToLower(milestone.Username)] + " completed " + strconv.Itoa(milestone.Xp) + " " + clueName + "\n"
+			}
+		case "EHB":
+			ehb = ehb + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHB\n"
+		case "EHP":
+			ehp = ehp + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHP\n"
+		case "LMS":
+			lms = lms + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " score\n"
+		}
+	}
+
+	// Send the Discord Embed message for the boss podium finish
+	if len(pvm) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "PVM Milestones", pvm, "https://i.imgur.com/Y1K2KRf.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+	// Send the Discord Embed message for the boss podium finish
+	if len(skill) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "Skilling Milestones", skill, "https://i.imgur.com/hUAw2PF.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+	// Send the Discord Embed message for the boss podium finish
+	if len(clues) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "Clues Milestones", clues, "https://i.imgur.com/g69Gnpd.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+	// Send the Discord Embed message for the boss podium finish
+	if len(ehb) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "EHB Milestones", ehb, "https://i.imgur.com/jy9pbkl.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+	// Send the Discord Embed message for the boss podium finish
+	if len(ehp) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "EHP Milestones", ehp, "https://i.imgur.com/i6zF4aa.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+	// Send the Discord Embed message for the boss podium finish
+	if len(lms) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "LMS Milestones", lms, "https://i.imgur.com/aqSJCNc.jpeg")
+		if err != nil {
+			logger.Error("Failed to send message for leagues podium.")
+			return
+		}
+	}
+
+	logger.Info("Finished running Temple Milestones update.")
 }
 
 func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {

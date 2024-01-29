@@ -179,6 +179,7 @@ func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 		s.updateKcHOF(ctx, session)
 		s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Theatre Of Blood", "Tombs Of Amascut", "Agility")
 		s.updateColLog(ctx, session)
+		s.updateTempleMilestones(ctx, session)
 		s.updateAllGoogleSheets(ctx)
 		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Google Sheets!")
 	})
