@@ -15,27 +15,31 @@ import (
 )
 
 type TempleClient struct {
-	client       *http.Client
-	addApiURL    string
-	removeApiURL string
-	podiumApiURL string
+	client         *http.Client
+	addApiURL      string
+	removeApiURL   string
+	podiumApiURL   string
+	templeGroupId  string
+	templeGroupKey string
 }
 
-func NewTempleClient() *TempleClient {
+func NewTempleClient(templeGroupId, templeGroupKey string) *TempleClient {
 	client := new(TempleClient)
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.addApiURL = "https://templeosrs.com/api/add_group_member.php"
 	client.removeApiURL = "https://templeosrs.com/api/remove_group_member.php"
-	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=2291&skill="
+	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=" + templeGroupId + "&skill="
+	client.templeGroupId = templeGroupId
+	client.templeGroupKey = templeGroupKey
 	return client
 }
 
 // AddMemberToTemple will make a POST request to the temple page to add a user to the group
-func (t *TempleClient) AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClient) AddMemberToTemple(ctx context.Context, addingMember string) {
 	logger := flume.FromContext(ctx)
 	logger.Info("Attempting to add new user to temple group: " + addingMember)
 
-	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + addingMember)
+	payload := strings.NewReader("id=" + t.templeGroupId + "&key=" + t.templeGroupKey + "&players=" + addingMember)
 	req, err := http.NewRequest(http.MethodPost, t.addApiURL, payload)
 	if err != nil {
 		logger.Error("Error while creating request: ", err.Error())
@@ -50,11 +54,11 @@ func (t *TempleClient) AddMemberToTemple(ctx context.Context, addingMember strin
 }
 
 // RemoveMemberFromTemple will make a POST request to the temple page to remove a user from the group
-func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMember string) {
 	logger := flume.FromContext(ctx)
 	logger.Info("Attempting to remove user from temple group: " + removingMember)
 
-	payload := strings.NewReader("id=" + templeGroupId + "&key=" + templeGroupKey + "&players=" + removingMember)
+	payload := strings.NewReader("id=" + t.templeGroupId + "&key=" + t.templeGroupKey + "&players=" + removingMember)
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, t.removeApiURL, payload)
 	if err != nil {

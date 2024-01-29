@@ -31,8 +31,8 @@ type sheets interface {
 }
 
 type temple interface {
-	AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string)
-	RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string)
+	AddMemberToTemple(ctx context.Context, addingMember string)
+	RemoveMemberFromTemple(ctx context.Context, removingMember string)
 	GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int)
 }
 

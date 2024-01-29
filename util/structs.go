@@ -9,7 +9,6 @@ type Config struct {
 	DiscGuildId           string `mapstructure:"DISCORD_GUILD_ID"`
 	DiscBotToken          string `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscSubChan           string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
-	DiscSignUpChan        string `mapstructure:"DISCORD_SIGNUP_CHANNEL"`
 	DiscPPLeaderboardChan string `mapstructure:"DISCORD_PP_LEADERBOARD_CHANNEL"`
 	DiscSpeedSubInfoChan  string `mapstructure:"DISCORD_SPEED_SUB_INFO_CHANNEL"`
 	DiscPPInfoChan        string `mapstructure:"DISCORD_PP_INFO_CHANNEL"`
@@ -20,22 +19,21 @@ type Config struct {
 	DiscSpeedApprovalChan string `mapstructure:"DISCORD_SPEED_APPROVAL_CHANNEL"`
 
 	// Third Party Information
-	TempleGroupId         string `mapstructure:"TEMPLE_GROUP_ID"`
-	TempleGroupKey        string `mapstructure:"TEMPLE_GROUP_KEY"`
-	SheetsCp              string `mapstructure:"SHEETS_CP"`
-	SheetsCpSC            string `mapstructure:"SHEETS_CP_SC"`
-	SheetsSpeed           string `mapstructure:"SHEETS_SPEED"`
-	SheetsSpeedSC         string `mapstructure:"SHEETS_SPEED_SC"`
-	SheetsTid             string `mapstructure:"SHEETS_TID"`
-	SheetsMembers         string `mapstructure:"SHEETS_MEMBERS"`
-	SheetsDiscordChannels string `mapstructure:"SHEETS_DISCORD_CHANNELS"`
-	ImgurClientId         string `mapstructure:"IMGUR_CLIENT_ID"`
-	ImgurClientSecret     string `mapstructure:"IMGUR_CLIENT_SECRET"`
-	ImgurRefreshToken     string `mapstructure:"IMGUR_REFRESH_TOKEN"`
-	PastebinUsername      string `mapstructure:"PASTEBIN_USERNAME"`
-	PastebinPassword      string `mapstructure:"PASTEBIN_PASSWORD"`
-	PastebinDevApiKey     string `mapstructure:"PASTEBIN_DEV_API_KEY"`
-	PastebinMainPasteKey  string `mapstructure:"PASTEBIN_MAIN_PASTE_KEY"`
+	TempleGroupId        string `mapstructure:"TEMPLE_GROUP_ID"`
+	TempleGroupKey       string `mapstructure:"TEMPLE_GROUP_KEY"`
+	SheetsCp             string `mapstructure:"SHEETS_CP"`
+	SheetsCpSC           string `mapstructure:"SHEETS_CP_SC"`
+	SheetsSpeed          string `mapstructure:"SHEETS_SPEED"`
+	SheetsSpeedSC        string `mapstructure:"SHEETS_SPEED_SC"`
+	SheetsTid            string `mapstructure:"SHEETS_TID"`
+	SheetsMembers        string `mapstructure:"SHEETS_MEMBERS"`
+	ImgurClientId        string `mapstructure:"IMGUR_CLIENT_ID"`
+	ImgurClientSecret    string `mapstructure:"IMGUR_CLIENT_SECRET"`
+	ImgurRefreshToken    string `mapstructure:"IMGUR_REFRESH_TOKEN"`
+	PastebinUsername     string `mapstructure:"PASTEBIN_USERNAME"`
+	PastebinPassword     string `mapstructure:"PASTEBIN_PASSWORD"`
+	PastebinDevApiKey    string `mapstructure:"PASTEBIN_DEV_API_KEY"`
+	PastebinMainPasteKey string `mapstructure:"PASTEBIN_MAIN_PASTE_KEY"`
 
 	//Guide Update
 	DiscGuideUpdateChan string `mapstructure:"DISCORD_GUIDE_UPDATE_CHANNEL"`

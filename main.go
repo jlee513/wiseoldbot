@@ -14,7 +14,7 @@ func main() {
 	sheets := http.NewGoogleSheetsClient(cfg)
 	collectionLog := http.NewCollectionLogClient()
 	imgur := http.NewImgurClient()
-	temple := http.NewTempleClient()
+	temple := http.NewTempleClient(cfg.TempleGroupId, cfg.TempleGroupKey)
 	runescape := http.NewRunescapeClient()
 	pastebin := http.NewPastebinClient(cfg.PastebinUsername, cfg.PastebinPassword, cfg.PastebinDevApiKey, cfg.PastebinMainPasteKey)
 

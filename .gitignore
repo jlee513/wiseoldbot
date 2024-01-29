@@ -28,6 +28,8 @@ main.exe
 
 # Remove .env
 config/.env
+config/.env_test
+config/.env_prod
 
 # secrets
 config/client_secret.json

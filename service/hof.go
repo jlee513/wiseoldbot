@@ -46,6 +46,12 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 		for _, bossInfo := range requestInfo.Bosses {
 			kcs, rankings := s.temple.GetKCsFromTemple(ctx, bossInfo.BossName)
 
+			// If nothing came back, continue on to the next boss
+			if kcs == nil {
+				logger.Debug("KCs came back nil for boss: " + bossInfo.BossName)
+				continue
+			}
+
 			// Group all the kcs under main players
 			mainKcs := make(map[int]util.Player)
 			altKcs := make(map[int]util.Player)

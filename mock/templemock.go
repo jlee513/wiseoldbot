@@ -17,14 +17,14 @@ func NewTempleClient() *TempleClientMock {
 	return client
 }
 
-func (t *TempleClientMock) AddMemberToTemple(ctx context.Context, addingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClientMock) AddMemberToTemple(ctx context.Context, addingMember string) {
 	return
 }
 
-func (t *TempleClientMock) RemoveMemberFromTemple(ctx context.Context, removingMember string, templeGroupId string, templeGroupKey string) {
+func (t *TempleClientMock) RemoveMemberFromTemple(ctx context.Context, removingMember string) {
 	return
 }
 
-func (t *TempleClientMock) GetPodiumFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+func (t *TempleClientMock) GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
 	return nil, nil
 }

@@ -346,7 +346,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				Main:        main,
 			}
 
-			s.temple.AddMemberToTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
+			s.temple.AddMemberToTemple(ctx, name)
 			s.templeUsernames[strings.ToLower(name)] = name
 			logger.Debug("You have successfully added a new member: " + name)
 			msg := "You have successfully added a new member: " + name
@@ -354,7 +354,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 		}
 	case "Remove":
 		// Remove the user from the temple page
-		s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
+		s.temple.RemoveMemberFromTemple(ctx, name)
 
 		if _, ok := s.members[name]; ok {
 			// If the account we're deleting is a main, check to see if there are any other accounts for this discord user
@@ -405,8 +405,8 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 	case "Name Change":
 		if _, ok := s.members[name]; ok {
 			// Remove the user from the temple page and add new name
-			s.temple.RemoveMemberFromTemple(ctx, name, s.config.TempleGroupId, s.config.TempleGroupKey)
-			s.temple.AddMemberToTemple(ctx, newName, s.config.TempleGroupId, s.config.TempleGroupKey)
+			s.temple.RemoveMemberFromTemple(ctx, name)
+			s.temple.AddMemberToTemple(ctx, newName)
 
 			// Update HOF Speed times from old name to new name
 			updatedSpeedInfo := make(map[string]util.SpeedInfo)
