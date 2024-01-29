@@ -145,7 +145,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	logger := flume.FromContext(ctx)
 
 	// First, delete all the messages within the channel
-	err := util.DeleteBulkDiscordMessages(session, s.config.DiscSpeedSubInfoChan, "")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscSpeedSubInfoChan)
 
 	speedSubmissionInstruction := []string{
 		"# Instructions for Speed Submissions",
@@ -187,7 +187,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 		}
 	}
 
-	err = util.DeleteBulkDiscordMessages(session, s.config.DiscPPInfoChan, "")
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscPPInfoChan)
 	if err != nil {
 		logger.Error("Failed to delete bulk discord messages: " + err.Error())
 	}

@@ -20,15 +20,15 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	hofLeaderboard := make(map[string]int)
 
 	// HOF KC
-	slayerBosses := util.HofRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSlayerBossesChan, AfterId: "1194801106291785778", Bosses: util.HofSlayerBosses}
-	gwd := util.HofRequestInfo{Name: "Godwars Dungeon", DiscChan: s.config.DiscGwdChan, AfterId: "1194801166429724884", Bosses: util.HofGWDBosses}
-	wildy := util.HofRequestInfo{Name: "Wilderness", DiscChan: s.config.DiscWildyChan, AfterId: "1194801335376285726", Bosses: util.HofWildyBosses}
-	other := util.HofRequestInfo{Name: "Other Bosses", DiscChan: s.config.DiscOtherChan, AfterId: "1194801512870846535", Bosses: util.HofOtherBosses}
-	misc := util.HofRequestInfo{Name: "Miscellaneous", DiscChan: s.config.DiscMiscChan, AfterId: "1194804397507620935", Bosses: util.HofMiscBosses}
-	dt2 := util.HofRequestInfo{Name: "Desert Treasure 2", DiscChan: s.config.DiscDT2Chan, AfterId: "1194802032855498832", Bosses: util.HofDT2Bosses}
-	raids := util.HofRequestInfo{Name: "Raids", DiscChan: s.config.DiscRaidsChan, AfterId: "1194802206487089182", Bosses: util.HofRaidsBosses}
-	pvp := util.HofRequestInfo{Name: "PVP", DiscChan: s.config.DiscPVPChan, AfterId: "1194802450209718272", Bosses: util.HofPVPBosses}
-	clues := util.HofRequestInfo{Name: "Clues", DiscChan: s.config.DiscCluesChan, AfterId: "1194802590270103582", Bosses: util.HofCluesBosses}
+	slayerBosses := util.HofRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSlayerBossesChan, Bosses: util.HofSlayerBosses}
+	gwd := util.HofRequestInfo{Name: "Godwars Dungeon", DiscChan: s.config.DiscGwdChan, Bosses: util.HofGWDBosses}
+	wildy := util.HofRequestInfo{Name: "Wilderness", DiscChan: s.config.DiscWildyChan, Bosses: util.HofWildyBosses}
+	other := util.HofRequestInfo{Name: "Other Bosses", DiscChan: s.config.DiscOtherChan, Bosses: util.HofOtherBosses}
+	misc := util.HofRequestInfo{Name: "Miscellaneous", DiscChan: s.config.DiscMiscChan, Bosses: util.HofMiscBosses}
+	dt2 := util.HofRequestInfo{Name: "Desert Treasure 2", DiscChan: s.config.DiscDT2Chan, Bosses: util.HofDT2Bosses}
+	raids := util.HofRequestInfo{Name: "Raids", DiscChan: s.config.DiscRaidsChan, Bosses: util.HofRaidsBosses}
+	pvp := util.HofRequestInfo{Name: "PVP", DiscChan: s.config.DiscPVPChan, Bosses: util.HofPVPBosses}
+	clues := util.HofRequestInfo{Name: "Clues", DiscChan: s.config.DiscCluesChan, Bosses: util.HofCluesBosses}
 
 	allRequestInfo := []util.HofRequestInfo{
 		slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues,
@@ -37,7 +37,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	for _, requestInfo := range allRequestInfo {
 		logger.Info("Running HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
-		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan, requestInfo.AfterId)
+		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
 		if err != nil {
 			logger.Error("Failed to delete discord messages: " + err.Error())
 		}
@@ -161,19 +161,19 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	logger := flume.FromContext(ctx)
 
 	// HOF Speed
-	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan, AfterId: "1194999599652425778", Bosses: util.HofSpeedTzhaar}
-	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan, AfterId: "1194999714710573078", Bosses: util.HofSpeedSlayer}
-	nightmare := util.SpeedsRequestInfo{Name: "Nightmare", DiscChan: s.config.DiscSpeedNightmareChan, AfterId: "1195000377288958023", Bosses: util.HofSpeedNightmare}
-	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan, AfterId: "1195000695594684416", Bosses: util.HofSpeedNex}
-	solo := util.SpeedsRequestInfo{Name: "Solo Bosses", DiscChan: s.config.DiscSpeedSoloChan, AfterId: "1195000959911350294", Bosses: util.HofSpeedSolo}
-	cox := util.SpeedsRequestInfo{Name: "Chambers Of Xeric", DiscChan: s.config.DiscSpeedCOXChan, AfterId: "1195001187276161155", Bosses: util.HofSpeedCox}
-	coxcm := util.SpeedsRequestInfo{Name: "Chambers Of Xeric Challenge Mode", DiscChan: s.config.DiscSpeedCOXCMChan, AfterId: "1196437479713165322", Bosses: util.HofSpeedCoxCm}
-	tob := util.SpeedsRequestInfo{Name: "Theatre Of Blood", DiscChan: s.config.DiscSpeedTOBChan, AfterId: "1195001367685779509", Bosses: util.HofSpeedTob}
-	tobhm := util.SpeedsRequestInfo{Name: "Theatre Of Blood Hard Mode", DiscChan: s.config.DiscSpeedTOBHMChan, AfterId: "1196437597053001758", Bosses: util.HofSpeedTobHm}
-	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan, AfterId: "1195001626604355656", Bosses: util.HofSpeedToa}
-	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan, AfterId: "1196437695522672650", Bosses: util.HofSpeedToae}
-	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, AfterId: "1195002755132174368", Bosses: util.HofSpeedAgility}
-	dt2 := util.SpeedsRequestInfo{Name: "Desert Treasure 2", Bosses: util.HofSpeedDt2, DiscChan: s.config.DiscSpeedDt2Chan, AfterId: "1197895349935812639"}
+	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan, Bosses: util.HofSpeedTzhaar}
+	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan, Bosses: util.HofSpeedSlayer}
+	nightmare := util.SpeedsRequestInfo{Name: "Nightmare", DiscChan: s.config.DiscSpeedNightmareChan, Bosses: util.HofSpeedNightmare}
+	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan, Bosses: util.HofSpeedNex}
+	solo := util.SpeedsRequestInfo{Name: "Solo Bosses", DiscChan: s.config.DiscSpeedSoloChan, Bosses: util.HofSpeedSolo}
+	cox := util.SpeedsRequestInfo{Name: "Chambers Of Xeric", DiscChan: s.config.DiscSpeedCOXChan, Bosses: util.HofSpeedCox}
+	coxcm := util.SpeedsRequestInfo{Name: "Chambers Of Xeric Challenge Mode", DiscChan: s.config.DiscSpeedCOXCMChan, Bosses: util.HofSpeedCoxCm}
+	tob := util.SpeedsRequestInfo{Name: "Theatre Of Blood", DiscChan: s.config.DiscSpeedTOBChan, Bosses: util.HofSpeedTob}
+	tobhm := util.SpeedsRequestInfo{Name: "Theatre Of Blood Hard Mode", DiscChan: s.config.DiscSpeedTOBHMChan, Bosses: util.HofSpeedTobHm}
+	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan, Bosses: util.HofSpeedToa}
+	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan, Bosses: util.HofSpeedToae}
+	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, Bosses: util.HofSpeedAgility}
+	dt2 := util.SpeedsRequestInfo{Name: "Desert Treasure 2", Bosses: util.HofSpeedDt2, DiscChan: s.config.DiscSpeedDt2Chan}
 
 	var allRequestInfo []util.SpeedsRequestInfo
 	for _, boss := range requestedBosses {
@@ -210,7 +210,7 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	for _, requestInfo := range allRequestInfo {
 		logger.Info("Running Speed HOF update for Boss: " + requestInfo.Name)
 		// First, delete all the messages within the channel
-		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan, requestInfo.AfterId)
+		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
 		if err != nil {
 			logger.Error("Failed to bulk delete discord messages: " + err.Error())
 		}

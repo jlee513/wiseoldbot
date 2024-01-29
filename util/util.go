@@ -165,8 +165,8 @@ func InteractionRespondChoices(session *discordgo.Session, i *discordgo.Interact
 	})
 }
 
-func DeleteBulkDiscordMessages(session *discordgo.Session, channel string, afterId string) error {
-	messages, err := session.ChannelMessages(channel, 100, "", afterId, "")
+func DeleteBulkDiscordMessages(session *discordgo.Session, channel string) error {
+	messages, err := session.ChannelMessages(channel, 100, "", channel, "")
 	if err != nil {
 		return err
 	}

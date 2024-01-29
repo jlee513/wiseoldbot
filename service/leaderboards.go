@@ -150,7 +150,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	})
 
 	// First, delete all the messages within the channel
-	err := util.DeleteBulkDiscordMessages(session, s.config.DiscHOFLeaderboardChan, "1196540272486649988")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscHOFLeaderboardChan)
 	if err != nil {
 		logger.Error("Failed to bulk delete discord messages: " + err.Error())
 	}
@@ -252,7 +252,7 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	}
 
 	// First, delete all the messages within the channel
-	err := util.DeleteBulkDiscordMessages(session, s.config.DiscColChan, "1196541219581460530")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscColChan)
 	if err != nil {
 		logger.Error("Failed to bulk delete discord messages: " + err.Error())
 	}
@@ -309,7 +309,7 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 	})
 
 	// First, delete all the messages within the channel
-	err := util.DeleteBulkDiscordMessages(session, s.config.DiscPetChan, "1200073192623059016")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscPetChan)
 	if err != nil {
 		logger.Error("Failed to bulk delete discord messages: " + err.Error())
 	}
@@ -355,7 +355,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	logger.Info("Running leagues hiscores update.")
 
 	// First, delete all the messages within the channel
-	err := util.DeleteBulkDiscordMessages(session, s.config.DiscLeaguesChan, "1196540715983974531")
+	err := util.DeleteBulkDiscordMessages(session, s.config.DiscLeaguesChan)
 	if err != nil {
 		logger.Error("Failed to delete bulk discord messages: " + err.Error())
 	}

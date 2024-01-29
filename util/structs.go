@@ -131,14 +131,12 @@ type HofRequestInfo struct {
 	Name     string
 	Bosses   []BossInfo
 	DiscChan string
-	AfterId  string
 }
 
 type SpeedsRequestInfo struct {
 	Name     string
 	Bosses   []BossInfo
 	DiscChan string
-	AfterId  string
 }
 
 type BossInfo struct {

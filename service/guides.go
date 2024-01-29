@@ -82,7 +82,7 @@ func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, g
 		guide := s.pastebin.GetGuide(ctx, guideInfo.PastebinKey)
 		guideArr := strings.Split(guide, "\n")
 
-		err := util.DeleteBulkDiscordMessages(session, guideInfo.DiscChan, guideInfo.DiscChan)
+		err := util.DeleteBulkDiscordMessages(session, guideInfo.DiscChan)
 		if err != nil {
 			logger.Error("Failed to delete bulk discord messages: " + err.Error())
 		}
