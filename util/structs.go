@@ -116,9 +116,12 @@ type PodiumLeaguePoints struct {
 
 type HallOfFameInfo struct {
 	Data struct {
-		BossName string         `json:"skill"`
-		Players  map[int]Player `json:"players"`
+		Memberlist map[string]HallOfFameBossInfo `json:"memberlist"`
 	} `json:"data"`
+}
+
+type HallOfFameBossInfo struct {
+	Bosses map[string]interface{}
 }
 
 type MilestoneInfo struct {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
@@ -339,7 +340,18 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			// Only add a clan point entry for a main
 			if main {
 				s.cp[name] = 0
+				s.mainAndAlts[name] = []string{}
+			} else {
+				mainName := ""
+				for name, member := range s.members {
+					if member.DiscordId == discordid && member.Main {
+						mainName = name
+					}
+				}
+				s.mainAndAlts[mainName] = append(s.mainAndAlts[mainName], name)
 			}
+
+			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 			s.members[name] = util.MemberInfo{
 				DiscordId:   discordid,
 				DiscordName: discordname,
@@ -361,36 +373,54 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			// If there is, just assign the first instance as main - if not, just delete
 			if s.members[name].Main {
 				logger.Debug("Deleting player is a main, searching for another account to become main...")
-				discordId := s.members[name].DiscordId
-				delete(s.members, name)
-				for user, member := range s.members {
-					if discordId == member.DiscordId {
-						logger.Debug("Found new main: " + user + ". Using as new main for user: " + s.members[user].DiscordName)
-						s.members[user] = util.MemberInfo{
-							DiscordId:   s.members[user].DiscordId,
-							DiscordName: s.members[user].DiscordName,
-							Feedback:    s.members[user].Feedback,
-							Main:        true,
-						}
-						s.cp[user] = s.cp[name]
+				if len(s.mainAndAlts[name]) > 0 {
+					newMain := s.mainAndAlts[name][0]
+					logger.Debug("Found new main: " + newMain + ". Using as new main for user: " + s.members[newMain].DiscordName)
+					s.members[newMain] = util.MemberInfo{
+						DiscordId:   s.members[newMain].DiscordId,
+						DiscordName: s.members[newMain].DiscordName,
+						Feedback:    s.members[newMain].Feedback,
+						Main:        true,
+					}
+					s.cp[newMain] = s.cp[name]
 
-						// Update HOF Speed times from deleted user to new main user
-						updatedSpeedInfo := make(map[string]util.SpeedInfo)
-						for boss, speedInfo := range s.speed {
-							updatedSpeedInfo[boss] = util.SpeedInfo{
-								PlayersInvolved: strings.Replace(speedInfo.PlayersInvolved, name, newName, -1),
-								Time:            speedInfo.Time,
-								URL:             speedInfo.URL,
-							}
+					// Update HOF Speed times from deleted user to new main user
+					updatedSpeedInfo := make(map[string]util.SpeedInfo)
+					for boss, speedInfo := range s.speed {
+						updatedSpeedInfo[boss] = util.SpeedInfo{
+							PlayersInvolved: strings.Replace(speedInfo.PlayersInvolved, name, newMain, -1),
+							Time:            speedInfo.Time,
+							URL:             speedInfo.URL,
 						}
-						s.speed = updatedSpeedInfo
+					}
+					s.speed = updatedSpeedInfo
+
+					// Promote newMain as the main of the group of alts as well
+					s.mainAndAlts[newMain] = s.mainAndAlts[name][1:]
+					delete(s.mainAndAlts, name)
+					delete(s.members, name)
+					delete(s.cp, name)
+				} else {
+					// NOTE: We will keep the speed times for the deleted user, if you want to remove this speed
+					// time, it must be invoked using the admin command
+					delete(s.mainAndAlts, name)
+					delete(s.members, name)
+					delete(s.cp, name)
+				}
+			} else {
+				// Determine the main account and remove this name from the list of alts
+				for main, alts := range s.mainAndAlts {
+					for place, alt := range alts {
+						if strings.Compare(alt, name) == 0 {
+							s.mainAndAlts[main] = append(s.mainAndAlts[main][:place], s.mainAndAlts[main][place+1:]...)
+						}
 					}
 				}
-				delete(s.cp, name)
-			} else {
+
 				delete(s.members, name)
-				delete(s.cp, name)
 			}
+
+			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 
 			logger.Debug("You have successfully removed a member: " + name)
 			msg := "You have successfully removed a member: " + name
@@ -418,6 +448,27 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				}
 			}
 			s.speed = updatedSpeedInfo
+
+			// If the name change is for a main, change the key to the mainAndAlts
+			if _, ok := s.mainAndAlts[name]; ok {
+				s.mainAndAlts[newName] = s.mainAndAlts[name]
+				delete(s.mainAndAlts, name)
+			} else {
+				// If the name change if for an alt, determine the main and change the value of the alt
+				mainName := ""
+				for main, alts := range s.mainAndAlts {
+					for place, alt := range alts {
+						if strings.Compare(alt, name) == 0 {
+							mainName = main
+							s.mainAndAlts[main] = append(s.mainAndAlts[main][:place], s.mainAndAlts[main][place+1:]...)
+						}
+					}
+				}
+				s.mainAndAlts[mainName] = append(s.mainAndAlts[mainName], newName)
+			}
+
+			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
+
 			s.members[newName] = s.members[name]
 			s.cp[newName] = s.cp[name]
 			s.templeUsernames[strings.ToLower(newName)] = newName
@@ -458,6 +509,16 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 		// Use the new name as the clan points owner
 		s.cp[newName] = s.cp[name]
 		delete(s.cp, name)
+
+		// Use the new name as the key in the mainAndAlts
+		for place, alt := range s.mainAndAlts[name] {
+			if strings.Compare(alt, newName) == 0 {
+				s.mainAndAlts[newName] = append(s.mainAndAlts[name][:place], s.mainAndAlts[name][place+1:]...)
+				s.mainAndAlts[newName] = append(s.mainAndAlts[newName], name)
+				delete(s.mainAndAlts, name)
+			}
+		}
+		logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 
 		// Set the main to true for the newName and set main to false for name
 		s.members[name] = util.MemberInfo{

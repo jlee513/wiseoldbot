@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"osrs-disc-bot/util"
-	"sort"
 	"strings"
 	"time"
 
@@ -18,7 +17,7 @@ type TempleClient struct {
 	client          *http.Client
 	addApiURL       string
 	removeApiURL    string
-	podiumApiURL    string
+	groupMemberInfo string
 	milestoneApiURL string
 	templeGroupId   string
 	templeGroupKey  string
@@ -29,7 +28,7 @@ func NewTempleClient(templeGroupId, templeGroupKey string) *TempleClient {
 	client.client = &http.Client{Timeout: 30 * time.Second}
 	client.addApiURL = "https://templeosrs.com/api/add_group_member.php"
 	client.removeApiURL = "https://templeosrs.com/api/remove_group_member.php"
-	client.podiumApiURL = "https://templeosrs.com/api/skill_hiscores.php?group=" + templeGroupId + "&skill="
+	client.groupMemberInfo = "https://templeosrs.com/api/group_member_info.php?bosses=true&id=" + templeGroupId
 	client.milestoneApiURL = "https://templeosrs.com/api/group_achievements.php?id=" + templeGroupId
 	client.templeGroupId = templeGroupId
 	client.templeGroupKey = templeGroupKey
@@ -79,13 +78,13 @@ func (t *TempleClient) RemoveMemberFromTemple(ctx context.Context, removingMembe
 GetKCsFromTemple will take in the bossid and make a request to temple to get the kc of all the players
 from our group
 */
-func (t *TempleClient) GetKCsFromTemple(ctx context.Context, bossIdForTemple string) (*util.HallOfFameInfo, []int) {
+func (t *TempleClient) GetKCsFromTemple(ctx context.Context) *util.HallOfFameInfo {
 	logger := flume.FromContext(ctx)
 
-	resp, err := t.client.Get(t.podiumApiURL + bossIdForTemple)
+	resp, err := t.client.Get(t.groupMemberInfo)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error while retrieving %s stats from temple API: ", bossIdForTemple), err.Error())
-		return nil, nil
+		logger.Error("Error while retrieving stats from temple API: ", err.Error())
+		return nil
 	}
 	defer resp.Body.Close()
 
@@ -93,7 +92,7 @@ func (t *TempleClient) GetKCsFromTemple(ctx context.Context, bossIdForTemple str
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			logger.Error("Error while reading response from temple: ", err.Error())
-			return nil, nil
+			return nil
 		}
 
 		// Unmarshal into hallOfFameInfo struct
@@ -101,20 +100,13 @@ func (t *TempleClient) GetKCsFromTemple(ctx context.Context, bossIdForTemple str
 		err = json.Unmarshal(bodyBytes, &f)
 		if err != nil {
 			logger.Error("Error parsing JSON: ", err.Error())
-			return nil, nil
+			return nil
 		}
 
-		// Sort the map based on the keys
-		keys := make([]int, 0, len(f.Data.Players))
-		for key := range f.Data.Players {
-			keys = append(keys, key)
-		}
-		sort.Ints(keys)
-
-		return &f, keys
+		return &f
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (t *TempleClient) GetMilestonesFromTemple(ctx context.Context) *util.MilestoneInfo {

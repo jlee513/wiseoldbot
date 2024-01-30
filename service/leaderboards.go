@@ -386,50 +386,52 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	clues := ""
 	ehb := ""
 	ehp := ""
-	lms := ""
+	pvp := ""
 
-	for _, milestone := range milestones.Data {
-		if strings.Contains(milestone.Skill, "Clue_") {
-			milestone.Type = "Clue"
-		} else if strings.Contains(milestone.Skill, "Ehb") {
-			milestone.Type = "EHB"
-		} else if strings.Contains(milestone.Skill, "Ehp") {
-			milestone.Type = "EHP"
-		} else if strings.Contains(milestone.Skill, "LMS") {
-			milestone.Type = "LMS"
-		}
-		switch milestone.Type {
-		case "Pvm":
-			pvm = pvm + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " kills\n"
-		case "Skill":
-			p := message.NewPrinter(language.English)
-			skill = skill + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + p.Sprintf("%d", milestone.Xp) + " in " + milestone.Skill + "\n"
-		case "Clue":
-			// Beautify some names
-			clueName := ""
-			switch milestone.Skill {
-			case "Clue_beginner":
-				clueName = "Beginner Clues"
-			case "Clue_easy":
-				clueName = "Easy Clues"
-			case "Clue_medium":
-				clueName = "Medium Clues"
-			case "Clue_hard":
-				clueName = "Hard Clues"
-			case "Clue_elite":
-				clueName = "Elite Clues"
-			case "Clue_master":
-				clueName = "Master Clues"
-			case "Clue_all":
-				clueName = "All Clues"
-				clues = clues + s.templeUsernames[strings.ToLower(milestone.Username)] + " completed " + strconv.Itoa(milestone.Xp) + " " + clueName + "\n"
+	if milestones != nil {
+		for _, milestone := range milestones.Data {
+			if strings.Contains(milestone.Skill, "Clue_") {
+				milestone.Type = "Clue"
+			} else if strings.Contains(milestone.Skill, "Ehb") {
+				milestone.Type = "EHB"
+			} else if strings.Contains(milestone.Skill, "Ehp") {
+				milestone.Type = "EHP"
+			} else if strings.Contains(milestone.Skill, "LMS") {
+				milestone.Type = "PVP"
 			}
-		case "EHB":
-			ehb = ehb + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHB\n"
-		case "EHP":
-			ehp = ehp + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHP\n"
-		case "LMS":
-			lms = lms + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " score\n"
+			switch milestone.Type {
+			case "Pvm":
+				pvm = pvm + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " kills\n"
+			case "Skill":
+				p := message.NewPrinter(language.English)
+				skill = skill + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + p.Sprintf("%d", milestone.Xp) + " in " + milestone.Skill + "\n"
+			case "Clue":
+				// Beautify some names
+				clueName := ""
+				switch milestone.Skill {
+				case "Clue_beginner":
+					clueName = "Beginner Clues"
+				case "Clue_easy":
+					clueName = "Easy Clues"
+				case "Clue_medium":
+					clueName = "Medium Clues"
+				case "Clue_hard":
+					clueName = "Hard Clues"
+				case "Clue_elite":
+					clueName = "Elite Clues"
+				case "Clue_master":
+					clueName = "Master Clues"
+				case "Clue_all":
+					clueName = "All Clues"
+					clues = clues + s.templeUsernames[strings.ToLower(milestone.Username)] + " completed " + strconv.Itoa(milestone.Xp) + " " + clueName + "\n"
+				}
+			case "EHB":
+				ehb = ehb + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHB\n"
+			case "EHP":
+				ehp = ehp + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + "EHP\n"
+			case "PVP":
+				pvp = pvp + s.templeUsernames[strings.ToLower(milestone.Username)] + " reached " + strconv.Itoa(milestone.Xp) + " " + milestone.Skill + " score\n"
+			}
 		}
 	}
 
@@ -474,8 +476,8 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 		}
 	}
 	// Send the Discord Embed message for the boss podium finish
-	if len(lms) > 0 {
-		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "LMS Milestones", lms, "https://i.imgur.com/aqSJCNc.jpeg")
+	if len(pvp) > 0 {
+		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "PVP Milestones", pvp, "https://i.imgur.com/aqSJCNc.jpeg")
 		if err != nil {
 			logger.Error("Failed to send message for leagues podium.")
 			return
