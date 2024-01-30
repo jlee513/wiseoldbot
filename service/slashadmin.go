@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
@@ -351,7 +350,6 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				s.mainAndAlts[mainName] = append(s.mainAndAlts[mainName], name)
 			}
 
-			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 			s.members[name] = util.MemberInfo{
 				DiscordId:   discordid,
 				DiscordName: discordname,
@@ -420,8 +418,6 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				delete(s.members, name)
 			}
 
-			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
-
 			logger.Debug("You have successfully removed a member: " + name)
 			msg := "You have successfully removed a member: " + name
 			return msg
@@ -466,8 +462,6 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				}
 				s.mainAndAlts[mainName] = append(s.mainAndAlts[mainName], newName)
 			}
-
-			logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 
 			s.members[newName] = s.members[name]
 			s.cp[newName] = s.cp[name]
@@ -518,7 +512,6 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 				delete(s.mainAndAlts, name)
 			}
 		}
-		logger.Info(fmt.Sprintf("%+v", s.mainAndAlts))
 
 		// Set the main to true for the newName and set main to false for name
 		s.members[name] = util.MemberInfo{

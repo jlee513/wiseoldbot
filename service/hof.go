@@ -41,6 +41,14 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	We need to parse through all the members and combine main/alt kcs. First, we need to retrieve the kcs from temple
 	*/
 	kcs := s.temple.GetKCsFromTemple(ctx)
+	updatedMemberList := make(map[string]util.HallOfFameBossInfo)
+
+	// Once we get the kcs, we need to iterate over all the keys and change the names to be their actual names stored
+	for name, kc := range kcs.Data.Memberlist {
+		updatedMemberList[s.templeUsernames[strings.ToLower(name)]] = kc
+	}
+
+	kcs.Data.Memberlist = updatedMemberList
 
 	// HOF KC
 	slayerBosses := util.HofRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSlayerBossesChan, Bosses: util.HofSlayerBosses}
