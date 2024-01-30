@@ -226,6 +226,11 @@ func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map
 	// Update the Google sheets information with the in memory cp map
 	row := 1
 
+	// First, delete everything from the sheets
+	err := sheet.DeleteRows(1, len(sheet.Rows))
+	checkError(ctx, err)
+
+	// Then insert in all the information from members
 	for user, memberInfo := range members {
 		sheet.Update(row, 0, user)
 		sheet.Update(row, 1, "ponies"+strconv.Itoa(memberInfo.DiscordId))
@@ -236,7 +241,7 @@ func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
+	err = sheet.Synchronize()
 	checkError(ctx, err)
 }
 
@@ -262,6 +267,10 @@ func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]in
 	// Update the Google sheets information with the in memory cp map
 	row := 1
 
+	// First, delete everything from the sheets
+	err := sheet.DeleteRows(1, len(sheet.Rows))
+	checkError(ctx, err)
+
 	// Sort based on number of clan points
 	keys := make([]string, 0, len(cp))
 
@@ -280,7 +289,7 @@ func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]in
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
+	err = sheet.Synchronize()
 	checkError(ctx, err)
 }
 

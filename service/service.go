@@ -32,6 +32,7 @@ type Service struct {
 	log              flume.Logger
 	tid              int
 	members          map[string]util.MemberInfo
+	mainAndAlts      map[string][]string
 	templeUsernames  map[string]string
 	discGuides       map[string][]util.GuideInfo
 
@@ -68,6 +69,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		log:              logger,
 		tid:              1,
 		members:          make(map[string]util.MemberInfo),
+		mainAndAlts:      make(map[string][]string),
 		templeUsernames:  make(map[string]string),
 		discGuides:       make(map[string][]util.GuideInfo),
 
@@ -85,6 +87,7 @@ func (s *Service) StartDiscordIRC() {
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
 	s.sheets.InitializeMembersFromSheet(ctx, s.members)
+	s.determineMainAndAlts(ctx, s.mainAndAlts)
 	s.pastebin.UpdateGuideList(ctx, s.discGuides)
 	s.tid = s.sheets.InitializeTIDFromSheet(ctx)
 
@@ -149,6 +152,39 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 
 	// Stop the cron scheduler
 	s.scheduler.Stop()
+}
+
+func (s *Service) determineMainAndAlts(ctx context.Context, mainAndAlts map[string][]string) {
+	// Key: Discord ID, Value: Name
+	altsBeforeMainIsFound := make(map[int][]string)
+	mainIdToName := make(map[int]string)
+
+	for memberName, member := range s.members {
+		if member.Main {
+			// If it exists within alts, move all the alt names to the mainAndAlts with the main as the key
+			if _, ok := altsBeforeMainIsFound[member.DiscordId]; ok {
+				mainAndAlts[memberName] = altsBeforeMainIsFound[member.DiscordId]
+				mainIdToName[member.DiscordId] = memberName
+				delete(altsBeforeMainIsFound, member.DiscordId)
+			} else {
+				// If it doesn't exist, just set the mainKcs object with the member object
+				mainIdToName[member.DiscordId] = memberName
+				mainAndAlts[memberName] = []string{}
+			}
+		} else {
+			// If it exists within the main, determine the main name by using the discord id and append it to the array
+			if _, ok := mainIdToName[member.DiscordId]; ok {
+				main := mainIdToName[member.DiscordId]
+				mainAndAlts[main] = append(mainAndAlts[main], memberName)
+			} else if _, ok := altsBeforeMainIsFound[member.DiscordId]; ok {
+				// Check to see if an altsBeforeMainIsFound exists - if it does, add it to that
+				altsBeforeMainIsFound[member.DiscordId] = append(altsBeforeMainIsFound[member.DiscordId], memberName)
+			} else {
+				// Otherwise, just add it to altsBeforeMainIsFound
+				altsBeforeMainIsFound[member.DiscordId] = []string{memberName}
+			}
+		}
+	}
 }
 
 func (s *Service) updateAllGoogleSheets(ctx context.Context) {

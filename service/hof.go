@@ -19,6 +19,29 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	logger := flume.FromContext(ctx)
 	hofLeaderboard := make(map[string]int)
 
+	logger.Info("Running HOF update for KCs from Temple")
+
+	/* Format:
+	{
+		"data": {
+			"memberlist": {
+				"Mager": {
+					"player": "Mager",
+					...
+					"bosses": {
+						"Clue_all": 1638,
+						"Clue_beginner": 264,
+						"Clue_easy": 501,
+						...
+				}
+			}
+		}
+	}
+
+	We need to parse through all the members and combine main/alt kcs. First, we need to retrieve the kcs from temple
+	*/
+	kcs := s.temple.GetKCsFromTemple(ctx)
+
 	// HOF KC
 	slayerBosses := util.HofRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSlayerBossesChan, Bosses: util.HofSlayerBosses}
 	gwd := util.HofRequestInfo{Name: "Godwars Dungeon", DiscChan: s.config.DiscGwdChan, Bosses: util.HofGWDBosses}
@@ -30,103 +53,69 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	pvp := util.HofRequestInfo{Name: "PVP", DiscChan: s.config.DiscPVPChan, Bosses: util.HofPVPBosses}
 	clues := util.HofRequestInfo{Name: "Clues", DiscChan: s.config.DiscCluesChan, Bosses: util.HofCluesBosses}
 
-	allRequestInfo := []util.HofRequestInfo{
+	kcList := []util.HofRequestInfo{
 		slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues,
 	}
 
-	for _, requestInfo := range allRequestInfo {
-		logger.Info("Running HOF update for Boss: " + requestInfo.Name)
+	// We will iterate through all the kcList and parse out all the important information
+	for _, kcItem := range kcList {
+		logger.Debug("Running HOF Section: " + kcItem.Name)
+
 		// First, delete all the messages within the channel
-		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
+		err := util.DeleteBulkDiscordMessages(session, kcItem.DiscChan)
 		if err != nil {
 			logger.Error("Failed to delete discord messages: " + err.Error())
 		}
 
-		// Now add all the bosses
-		for _, bossInfo := range requestInfo.Bosses {
-			kcs, rankings := s.temple.GetKCsFromTemple(ctx, bossInfo.BossName)
-
-			// If nothing came back, continue on to the next boss
-			if kcs == nil {
-				logger.Debug("KCs came back nil for boss: " + bossInfo.BossName)
-				continue
-			}
-
-			// Group all the kcs under main players
-			mainKcs := make(map[int]util.Player)
-			altKcs := make(map[int]util.Player)
-
-			// Go through the rankings and determine whether they are a main or not
-			for ranking := range rankings {
-				member := s.members[s.templeUsernames[strings.ToLower(kcs.Data.Players[ranking].Username)]]
-				// If they are a main, check to see if there are any alts there already calculated
-				if member.Main {
-					// If it exists within alt kcs, add it to the current member and delete it from alt kcs
-					if _, ok := altKcs[member.DiscordId]; ok {
-						updatedMemberKcs := util.Player{
-							Username: kcs.Data.Players[ranking].Username,
-							Kc:       kcs.Data.Players[ranking].Kc + altKcs[member.DiscordId].Kc,
-						}
-						mainKcs[member.DiscordId] = updatedMemberKcs
-						delete(altKcs, member.DiscordId)
-					} else {
-						// If it doesn't exist, just set the mainKcs object with the member object
-						mainKcs[member.DiscordId] = kcs.Data.Players[ranking]
-					}
-				} else {
-					// If it exists within the main kcs, add to it
-					if _, ok := mainKcs[member.DiscordId]; ok {
-						updatedMemberKcs := util.Player{
-							Username: mainKcs[member.DiscordId].Username,
-							Kc:       kcs.Data.Players[ranking].Kc + mainKcs[member.DiscordId].Kc,
-						}
-						mainKcs[member.DiscordId] = updatedMemberKcs
-					} else if _, ok := altKcs[member.DiscordId]; ok {
-						// Check to see if an altKcs exists - if it does, add it to that
-						updatedMemberKcs := util.Player{
-							Username: altKcs[member.DiscordId].Username,
-							Kc:       kcs.Data.Players[ranking].Kc + altKcs[member.DiscordId].Kc,
-						}
-						altKcs[member.DiscordId] = updatedMemberKcs
-					} else {
-						// Otherwise, just add it to altKcs
-						altKcs[member.DiscordId] = kcs.Data.Players[ranking]
-					}
+		// For each of the bosses, we need to iterate over the list of mainAndAlts to add them up
+		// kcs.Data.Memberlist["Mager"].Bosses["Callisto"] <- this is how you access the kcs
+		for _, boss := range kcItem.Bosses {
+			addedUpKcs := make(map[string]int)
+			for main, alts := range s.mainAndAlts {
+				if kcs.Data.Memberlist[main].Bosses[boss.BossName] == nil {
+					continue
 				}
+				totalKc := int(kcs.Data.Memberlist[main].Bosses[boss.BossName].(float64))
+				for _, alt := range alts {
+					if kcs.Data.Memberlist[alt].Bosses[boss.BossName] == nil {
+						continue
+					}
+					totalKc += int(kcs.Data.Memberlist[alt].Bosses[boss.BossName].(float64))
+				}
+				addedUpKcs[main] = totalKc
 			}
+			// Sort the addedUpKcs based on the value (which is the addedUpKc)
+			updatedRankings := make([]string, 0, len(addedUpKcs))
 
-			// Re-assign rankings for mainKcs
-			updatedRankings := make([]int, 0, len(mainKcs))
-
-			for key := range mainKcs {
+			for key := range addedUpKcs {
 				updatedRankings = append(updatedRankings, key)
 			}
 
 			sort.SliceStable(updatedRankings, func(i, j int) bool {
-				return mainKcs[updatedRankings[i]].Kc > mainKcs[updatedRankings[j]].Kc
+				return addedUpKcs[updatedRankings[i]] > addedUpKcs[updatedRankings[j]]
 			})
 
-			// Iterate over the players to get the different places for users to create the placements
+			//Iterate over the players to get the different places for users to create the placements
 			placements := ""
-			for placement, updatedRank := range updatedRankings {
+			for placement, player := range updatedRankings {
 				switch placement {
 				case 0:
 					placements = placements + ":first_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 3)
-					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					s.addToHOFLeaderboard(hofLeaderboard, player, 3)
+					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
 				case 1:
 					placements = placements + ":second_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 2)
-					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					s.addToHOFLeaderboard(hofLeaderboard, player, 2)
+					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
 				case 2:
 					placements = placements + ":third_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, mainKcs[updatedRank].Username, 1)
-					placements = placements + s.templeUsernames[strings.ToLower(mainKcs[updatedRank].Username)] + " [" + strconv.Itoa(mainKcs[updatedRank].Kc) + "]\n"
+					s.addToHOFLeaderboard(hofLeaderboard, player, 1)
+					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
 				}
 			}
 
 			// Beautify some names
-			bossName := kcs.Data.BossName
+			bossName := boss.BossName
 			switch bossName {
 			case "Clue_beginner":
 				bossName = "Beginner Clue"
@@ -151,9 +140,9 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 			}
 
 			// Send the Discord Embed message for the boss podium finish
-			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, placements, bossInfo.ImageLink)
+			err = util.SendDiscordEmbedMsg(session, kcItem.DiscChan, bossName, placements, boss.ImageLink)
 			if err != nil {
-				logger.Error("Failed to send message for boss: " + kcs.Data.BossName)
+				logger.Error("Failed to send message for boss: " + bossName)
 				return
 			}
 		}
