@@ -155,7 +155,6 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 }
 
 func (s *Service) determineMainAndAlts(ctx context.Context, mainAndAlts map[string][]string) {
-	logger := flume.FromContext(ctx)
 	// Key: Discord ID, Value: Name
 	altsBeforeMainIsFound := make(map[int][]string)
 	mainIdToName := make(map[int]string)
@@ -186,8 +185,6 @@ func (s *Service) determineMainAndAlts(ctx context.Context, mainAndAlts map[stri
 			}
 		}
 	}
-
-	logger.Info(fmt.Sprintf("%+v", mainAndAlts))
 }
 
 func (s *Service) updateAllGoogleSheets(ctx context.Context) {
