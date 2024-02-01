@@ -42,7 +42,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		if err != nil {
 			logger.Error("Failed to send admin interaction response: " + err.Error())
 		}
-	case "reset-speed":
+	case "speed":
 		s.resetSpeedAdmin(session, i)
 	case "update-leaderboard":
 		s.updateLeaderboard(session, i)
@@ -83,47 +83,92 @@ func (s *Service) resetSpeedAdmin(session *discordgo.Session, i *discordgo.Inter
 	case discordgo.InteractionApplicationCommand:
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		defer func() { s.tid++ }()
-		s.resetSpeedAdminCommand(ctx, session, i)
+		s.speedAdminCommand(ctx, session, i)
 	case discordgo.InteractionApplicationCommandAutocomplete:
-		s.resetSpeedAdminAutocomplete(session, i)
+		s.speedAdminAutocomplete(session, i)
 	}
 }
 
-func (s *Service) resetSpeedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
+func (s *Service) speedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	options := i.ApplicationCommandData().Options[0].Options
-	logger := flume.FromContext(ctx)
+	//logger := flume.FromContext(ctx)
 
+	action := ""
 	category := ""
-	boss := ""
+	existingBoss := ""
+	newBoss := ""
+	//updateSpeedTime := ""
+	//updatePlayerNames := ""
 
 	for _, option := range options {
 		switch option.Name {
+		case "action":
+			action = option.Value.(string)
 		case "category":
 			category = option.Value.(string)
-		case "boss":
-			boss = option.Value.(string)
+		case "existing-boss":
+			existingBoss = option.Value.(string)
+		case "new-boss":
+			newBoss = option.Value.(string)
+			//case "update-speed-time":
+			//	updateSpeedTime = option.Value.(string)
+			//case "update-player-names":
+			//	updatePlayerNames = option.Value.(string)
 		}
 	}
 
-	logger.Info("Resetting speed for: " + boss)
+	switch action {
+	case "Reset":
+		s.resetSpeed(ctx, session, i, existingBoss, category)
+	case "Add":
+		s.addNewSpeed(ctx, session, i, newBoss, category)
+	}
 
-	err := util.InteractionRespond(session, i, "Resetting speed for: "+boss)
+}
+
+func (s *Service) resetSpeed(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate, existingBoss, category string) {
+	logger := flume.FromContext(ctx)
+	logger.Info("Resetting speed for: " + existingBoss)
+
+	err := util.InteractionRespond(session, i, "Resetting speed for: "+existingBoss)
 	if err != nil {
 		logger.Error("Failed to send admin interaction response: " + err.Error())
 	}
 
 	// Ensure the boss name is okay
-	if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
-		logger.Error("Incorrect boss name: ", boss)
+	if _, ok := util.SpeedBossNameToCategory[existingBoss]; !ok {
+		logger.Error("Incorrect boss name: ", existingBoss)
+		return
 	}
 
 	// Convert the time string into time
 	t := util.CalculateTime("22:22:22.60")
-	s.speed[boss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
+	s.speed[existingBoss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
 	s.updateSpeedHOF(ctx, session, category)
 }
 
-func (s *Service) resetSpeedAdminAutocomplete(session *discordgo.Session, i *discordgo.InteractionCreate) {
+func (s *Service) addNewSpeed(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate, newBoss, category string) {
+	logger := flume.FromContext(ctx)
+	logger.Info("Adding new speed for: " + newBoss)
+
+	err := util.InteractionRespond(session, i, "Adding new speed for: "+newBoss)
+	if err != nil {
+		logger.Error("Failed to send admin interaction response: " + err.Error())
+	}
+
+	// Ensure the boss name is okay
+	if _, ok := util.SpeedBossNameToCategory[newBoss]; ok {
+		logger.Error("Inputted in existing boss: ", newBoss)
+		return
+	}
+
+	// Convert the time string into time
+	t := util.CalculateTime("22:22:22.60")
+	s.speed[newBoss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png"}
+	s.updateSpeedHOF(ctx, session, category)
+}
+
+func (s *Service) speedAdminAutocomplete(session *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData().Options[0]
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	switch {
@@ -564,16 +609,22 @@ func (s *Service) updatePPPoints(ctx context.Context, session *discordgo.Session
 		}
 	}
 
-	switch addOrRemove {
-	case "Add":
-		logger.Info("Adding " + strconv.Itoa(pp) + " ponies point(s) to " + player)
-		s.cp[player] += pp
-	case "Remove":
-		logger.Info("Removing " + strconv.Itoa(pp) + " ponies point(s) to " + player)
-		if s.cp[player]-pp < 0 {
-			s.cp[player] = 0
-		} else {
-			s.cp[player] -= pp
+	// Check to see if there are multiple people
+	players := util.WhiteStripCommas(player)
+	listOfPlayers := strings.Split(players, ",")
+
+	for _, player := range listOfPlayers {
+		switch addOrRemove {
+		case "Add":
+			logger.Info("Adding " + strconv.Itoa(pp) + " ponies point(s) to " + player)
+			s.cp[player] += pp
+		case "Remove":
+			logger.Info("Removing " + strconv.Itoa(pp) + " ponies point(s) to " + player)
+			if s.cp[player]-pp < 0 {
+				s.cp[player] = 0
+			} else {
+				s.cp[player] -= pp
+			}
 		}
 	}
 
