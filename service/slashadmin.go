@@ -23,7 +23,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 			s.log.Error("Failed to send admin interaction response: " + err.Error())
 		}
 		s.updatePpLeaderboard(ctx, session)
-	case "update-instructions":
+	case "instructions":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
@@ -33,7 +33,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		}
 		_ = s.updateSubmissionInstructions(ctx, session)
 		return
-	case "update-points":
+	case "points":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
@@ -44,9 +44,9 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		}
 	case "speed":
 		s.resetSpeedAdmin(session, i)
-	case "update-leaderboard":
+	case "leaderboard":
 		s.updateLeaderboard(session, i)
-	case "update-sheets":
+	case "sheets":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
@@ -56,7 +56,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		}
 		s.updateAllGoogleSheets(ctx)
 		return
-	case "update-guides-map":
+	case "guides-map":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
@@ -102,7 +102,7 @@ func (s *Service) speedAdminCommand(ctx context.Context, session *discordgo.Sess
 
 	for _, option := range options {
 		switch option.Name {
-		case "action":
+		case "option":
 			action = option.Value.(string)
 		case "category":
 			category = option.Value.(string)

@@ -29,14 +29,20 @@ func (s *Service) updateLeaderboardCommand(session *discordgo.Session, i *discor
 
 	leaderboardName := ""
 	threadName := ""
+	action := ""
+
 	for _, option := range options {
 		switch option.Name {
+		case "option":
+			action = option.Value.(string)
 		case "leaderboard":
 			leaderboardName = option.Value.(string)
 		case "thread":
 			threadName = option.Value.(string)
 		}
 	}
+
+	logger.Debug("Action: " + action)
 
 	switch leaderboardName {
 	case "Kc":
@@ -91,7 +97,7 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 	data := i.ApplicationCommandData()
 	var choices []*discordgo.ApplicationCommandOptionChoice
 	switch {
-	case data.Options[0].Options[0].Focused:
+	case data.Options[0].Options[1].Focused:
 		choices = []*discordgo.ApplicationCommandOptionChoice{
 			{
 				Name:  "Kc",
@@ -111,8 +117,8 @@ func (s *Service) updateLeaderboardAutocomplete(session *discordgo.Session, i *d
 			},
 		}
 	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
-	case data.Options[0].Options[1].Focused:
-		switch data.Options[0].Options[0].Value.(string) {
+	case data.Options[0].Options[2].Focused:
+		switch data.Options[0].Options[1].Value.(string) {
 		case "Kc":
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
 				Name:  "All",
