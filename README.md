@@ -148,7 +148,7 @@ You need to have Golang installed on your computer. For instructions on how to d
 
 https://go.dev/doc/install
 
-You will also need the accounts on the following third party applications:
+You will also need the following third party applications:
 
 * Discord Bot created for this project
 * Google account that all the admins will have access to
@@ -159,7 +159,7 @@ You will also need the accounts on the following third party applications:
 
 ### Installation
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+_Below is an example of how you can start installing and setting up the Wise Old Bot._
 
 1. Clone the repo
    ```sh
