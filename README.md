@@ -22,7 +22,7 @@
 <h3 align="center">Wise Old Bot</h3>
 
   <p align="center">
-    A fully fledged Old School Runescape discord bot that allows for the entire clan experience!
+    A fully fledged Old School Runescape Discord bot that allows for the entire clan experience!
     <br />
     <a href="https://github.com/jlee513/wiseoldbot"><strong>Explore the docs »</strong></a>
     <br />
@@ -64,6 +64,20 @@
     <li><a href="#general-information">General Information</a>
       <ul>
         <li><a href="#main-player-paradigm">Main Player Paradigm</a></li>
+      </ul>
+    </li>
+    <li><a href="#clan-points-instructions">Clan Points Instructions</a>
+      <ul>
+        <li><a href="#player-submission">Player Submission</a></li>
+        <li><a href="#admin-approvals">Admin Approvals</a></li>
+        <li><a href="#feedback-channel">Feedback Channel</a></li>
+      </ul>
+    </li>
+    <li><a href="#speed-instructions">Speed Instructions</a>
+      <ul>
+        <li><a href="#player-submission">Player Submission</a></li>
+        <li><a href="#admin-approvals">Admin Approvals</a></li>
+        <li><a href="#feedback-channel">Feedback Channel</a></li>
       </ul>
     </li>
     <li><a href="#guide-slash-command-instructions">Guide Slash Command Instructions</a>
@@ -280,6 +294,39 @@ In this example above, the clan points and speed times will be tracked under the
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+<!-- CP AND SPEED SLASH COMMAND INSTRUCTIONS -->
+## Clan Points Instructions
+### Player Submission
+![cpsubmit][cpsubmit-gif]
+
+### Admin Approvals
+Once a successful submission is submitted as shown above, a message will pop up in a designated hidden channel meant for only moderators. You can approved/denied using the ✅ or ❌ buttons at the bottom. Once selected, the message will be removed from the channel and will send feedback to the appropriate feedback channel of the submitter.
+
+![cpadminapproval][cpadminapproval-screenshot]
+
+### Feedback Channel
+A feedback channel will be created if it's the first time someone has submitted. It will create a channel with only that person as well as the moderators. This is the place that is used to discuss why a submission was accepted/rejected as well as serves a history of all submissions for the user.
+
+![feedbackcp][feedbackcp-screenshot]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Speed Instructions
+### Player Submission
+![speedsubmit][speedsubmit-gif]
+
+### Admin Approvals
+Once a successful submission is submitted as shown above, a message will pop up in a designated hidden channel meant for only moderators. You can approved/denied using the ✅ or ❌ buttons at the bottom. Once selected, the message will be removed from the channel and will send feedback to the appropriate feedback channel of the submitter.
+
+![speedapproval][speedapproval-screenshot]
+
+### Feedback Channel
+A feedback channel will be created if it's the first time someone has submitted. It will create a channel with only that person as well as the moderators. This is the place that is used to discuss why a submission was accepted/rejected as well as serves a history of all submissions for the user.
+
+![feedbackspeed][feedbackspeed-screenshot]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 <!-- GUIDE SLASH COMMAND INSTRUCTIONS -->
 ## Guide Slash Command Instructions
 ![guidecommands][guidecommands-screenshot]
@@ -435,6 +482,12 @@ Project Link: [https://github.com/jlee513/wiseoldbot](https://github.com/jlee513
 [main-screenshot]: images/main.png
 [admincommands-screenshot]: images/admincommands.png
 [guidecommands-screenshot]: images/guidecommands.png
+[cpsubmit-gif]:images/cpsubmit.gif
+[cpadminapproval-screenshot]: images/cpadminapproval.jpg
+[feedbackcp-screenshot]: images/feedbackcp.png
+[speedsubmit-gif]: images/speedsubmit.gif
+[speedapproval-screenshot]: images/speedapproval.jpg
+[feedbackspeed-screenshot]: images/feedbackspeed.png
 [Golang]: https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white
 [Golang-url]: https://go.dev/
 

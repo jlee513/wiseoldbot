@@ -147,7 +147,7 @@ func (s *Service) handleSpeedSubmissionAutocomplete(session *discordgo.Session, 
 			})
 		}
 	case data.Options[1].Focused:
-		for _, boss := range s.speedCategory[data.Options[1].Value.(string)] {
+		for _, boss := range s.speedCategory[data.Options[0].Value.(string)] {
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
 				Name:  boss,
 				Value: boss,
