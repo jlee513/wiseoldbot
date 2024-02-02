@@ -219,24 +219,34 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 		}
 	}
 
-	for _, requestInfo := range allRequestInfo {
-		logger.Info("Running Speed HOF update for Boss: " + requestInfo.Name)
-		// First, delete all the messages within the channel
-		err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
-		if err != nil {
-			logger.Error("Failed to bulk delete discord messages: " + err.Error())
-		}
+	var wg sync.WaitGroup
 
-		// Now add all the bosses
-		for _, bossName := range s.speedCategory[requestInfo.Name] {
-			// Get the speed info
-			speed := s.speed[bossName]
-			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
+	for _, requestInfo := range allRequestInfo {
+		wg.Add(1)
+
+		go func(requestInfo util.SpeedsRequestInfo) {
+			defer wg.Done()
+			logger.Debug("Running Speed HOF update for Boss: " + requestInfo.Name)
+			// First, delete all the messages within the channel
+			err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
 			if err != nil {
-				logger.Error("Failed to send message for boss: " + bossName)
-				return
+				logger.Error("Failed to bulk delete discord messages: " + err.Error())
 			}
-		}
+
+			// Now add all the bosses
+			for _, bossName := range s.speedCategory[requestInfo.Name] {
+				// Get the speed info
+				speed := s.speed[bossName]
+				err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
+				if err != nil {
+					logger.Error("Failed to send message for boss: " + bossName)
+					return
+				}
+			}
+		}(requestInfo)
+
 	}
+
+	wg.Wait()
 	logger.Info("Successfully updated Speed Hall Of Fame")
 }

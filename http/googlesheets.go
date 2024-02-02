@@ -340,6 +340,10 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 	// Overwrite the rows
 	startingRow := 1
 
+	// First, delete everything from the sheets
+	err := sheet.DeleteRows(1, len(sheet.Rows))
+	checkError(ctx, err)
+
 	for category := range util.HofSpeedCategories {
 		bosses := speedCategory[category]
 		sort.Strings(bosses)
@@ -354,7 +358,7 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
+	err = sheet.Synchronize()
 	checkError(ctx, err)
 }
 
