@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 /*
@@ -65,97 +66,105 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 		slayerBosses, gwd, wildy, other, misc, dt2, raids, pvp, clues,
 	}
 
+	var wg sync.WaitGroup
+
 	// We will iterate through all the kcList and parse out all the important information
 	for _, kcItem := range kcList {
-		logger.Debug("Running HOF Section: " + kcItem.Name)
+		wg.Add(1)
 
-		// First, delete all the messages within the channel
-		err := util.DeleteBulkDiscordMessages(session, kcItem.DiscChan)
-		if err != nil {
-			logger.Error("Failed to delete discord messages: " + err.Error())
-		}
+		// Kick off a goroutine for each of the updates
+		go func(kcItem util.HofRequestInfo) {
+			logger.Debug("Running HOF Section: " + kcItem.Name)
+			defer wg.Done()
+			// First, delete all the messages within the channel
+			err := util.DeleteBulkDiscordMessages(session, kcItem.DiscChan)
+			if err != nil {
+				logger.Error("Failed to delete discord messages: " + err.Error())
+			}
 
-		// For each of the bosses, we need to iterate over the list of mainAndAlts to add them up
-		// kcs.Data.Memberlist["Mager"].Bosses["Callisto"] <- this is how you access the kcs
-		for _, boss := range kcItem.Bosses {
-			addedUpKcs := make(map[string]int)
-			for main, alts := range s.mainAndAlts {
-				if kcs.Data.Memberlist[main].Bosses[boss.BossName] == nil {
-					continue
-				}
-				totalKc := int(kcs.Data.Memberlist[main].Bosses[boss.BossName].(float64))
-				for _, alt := range alts {
-					if kcs.Data.Memberlist[alt].Bosses[boss.BossName] == nil {
+			// For each of the bosses, we need to iterate over the list of mainAndAlts to add them up
+			// kcs.Data.Memberlist["Mager"].Bosses["Callisto"] <- this is how you access the kcs
+			for _, boss := range kcItem.Bosses {
+				addedUpKcs := make(map[string]int)
+				for main, alts := range s.mainAndAlts {
+					if kcs.Data.Memberlist[main].Bosses[boss.BossName] == nil {
 						continue
 					}
-					totalKc += int(kcs.Data.Memberlist[alt].Bosses[boss.BossName].(float64))
+					totalKc := int(kcs.Data.Memberlist[main].Bosses[boss.BossName].(float64))
+					for _, alt := range alts {
+						if kcs.Data.Memberlist[alt].Bosses[boss.BossName] == nil {
+							continue
+						}
+						totalKc += int(kcs.Data.Memberlist[alt].Bosses[boss.BossName].(float64))
+					}
+					addedUpKcs[main] = totalKc
 				}
-				addedUpKcs[main] = totalKc
-			}
-			// Sort the addedUpKcs based on the value (which is the addedUpKc)
-			updatedRankings := make([]string, 0, len(addedUpKcs))
+				// Sort the addedUpKcs based on the value (which is the addedUpKc)
+				updatedRankings := make([]string, 0, len(addedUpKcs))
 
-			for key := range addedUpKcs {
-				updatedRankings = append(updatedRankings, key)
-			}
+				for key := range addedUpKcs {
+					updatedRankings = append(updatedRankings, key)
+				}
 
-			sort.SliceStable(updatedRankings, func(i, j int) bool {
-				return addedUpKcs[updatedRankings[i]] > addedUpKcs[updatedRankings[j]]
-			})
+				sort.SliceStable(updatedRankings, func(i, j int) bool {
+					return addedUpKcs[updatedRankings[i]] > addedUpKcs[updatedRankings[j]]
+				})
 
-			//Iterate over the players to get the different places for users to create the placements
-			placements := ""
-			for placement, player := range updatedRankings {
-				switch placement {
-				case 0:
-					placements = placements + ":first_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, player, 3)
-					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
-				case 1:
-					placements = placements + ":second_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, player, 2)
-					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
-				case 2:
-					placements = placements + ":third_place: "
-					s.addToHOFLeaderboard(hofLeaderboard, player, 1)
-					placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
+				//Iterate over the players to get the different places for users to create the placements
+				placements := ""
+				for placement, player := range updatedRankings {
+					switch placement {
+					case 0:
+						placements = placements + ":first_place: "
+						s.addToHOFLeaderboard(hofLeaderboard, player, 3)
+						placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
+					case 1:
+						placements = placements + ":second_place: "
+						s.addToHOFLeaderboard(hofLeaderboard, player, 2)
+						placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
+					case 2:
+						placements = placements + ":third_place: "
+						s.addToHOFLeaderboard(hofLeaderboard, player, 1)
+						placements = placements + s.templeUsernames[strings.ToLower(player)] + " [" + strconv.Itoa(addedUpKcs[player]) + "]\n"
+					}
+				}
+
+				// Beautify some names
+				bossName := boss.BossName
+				switch bossName {
+				case "Clue_beginner":
+					bossName = "Beginner Clue"
+				case "Clue_easy":
+					bossName = "Easy Clue"
+				case "Clue_medium":
+					bossName = "Medium Clue"
+				case "Clue_hard":
+					bossName = "Hard Clue"
+				case "Clue_elite":
+					bossName = "Elite Clue"
+				case "Clue_master":
+					bossName = "Master Clue"
+				case "Clue_all":
+					bossName = "All Clues"
+				case "Bounty Hunter Hunter":
+					bossName = "Bounty Hunter - Hunter"
+				case "Bounty Hunter Rogue":
+					bossName = "Bounty Hunter - Rogue"
+				case "Theatre of Blood Challenge Mode":
+					bossName = "Theatre of Blood Hard Mode"
+				}
+
+				// Send the Discord Embed message for the boss podium finish
+				err = util.SendDiscordEmbedMsg(session, kcItem.DiscChan, bossName, placements, boss.ImageLink)
+				if err != nil {
+					logger.Error("Failed to send message for boss: " + bossName)
+					return
 				}
 			}
-
-			// Beautify some names
-			bossName := boss.BossName
-			switch bossName {
-			case "Clue_beginner":
-				bossName = "Beginner Clue"
-			case "Clue_easy":
-				bossName = "Easy Clue"
-			case "Clue_medium":
-				bossName = "Medium Clue"
-			case "Clue_hard":
-				bossName = "Hard Clue"
-			case "Clue_elite":
-				bossName = "Elite Clue"
-			case "Clue_master":
-				bossName = "Master Clue"
-			case "Clue_all":
-				bossName = "All Clues"
-			case "Bounty Hunter Hunter":
-				bossName = "Bounty Hunter - Hunter"
-			case "Bounty Hunter Rogue":
-				bossName = "Bounty Hunter - Rogue"
-			case "Theatre of Blood Challenge Mode":
-				bossName = "Theatre of Blood Hard Mode"
-			}
-
-			// Send the Discord Embed message for the boss podium finish
-			err = util.SendDiscordEmbedMsg(session, kcItem.DiscChan, bossName, placements, boss.ImageLink)
-			if err != nil {
-				logger.Error("Failed to send message for boss: " + bossName)
-				return
-			}
-		}
+		}(kcItem)
 	}
 
+	wg.Wait()
 	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
 	logger.Info("Successfully updated KC Hall Of Fame")
 }
@@ -164,19 +173,19 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 	logger := flume.FromContext(ctx)
 
 	// HOF Speed
-	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan, Bosses: util.HofSpeedTzhaar}
-	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan, Bosses: util.HofSpeedSlayer}
-	nightmare := util.SpeedsRequestInfo{Name: "Nightmare", DiscChan: s.config.DiscSpeedNightmareChan, Bosses: util.HofSpeedNightmare}
-	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan, Bosses: util.HofSpeedNex}
-	solo := util.SpeedsRequestInfo{Name: "Solo Bosses", DiscChan: s.config.DiscSpeedSoloChan, Bosses: util.HofSpeedSolo}
-	cox := util.SpeedsRequestInfo{Name: "Chambers Of Xeric", DiscChan: s.config.DiscSpeedCOXChan, Bosses: util.HofSpeedCox}
-	coxcm := util.SpeedsRequestInfo{Name: "Chambers Of Xeric Challenge Mode", DiscChan: s.config.DiscSpeedCOXCMChan, Bosses: util.HofSpeedCoxCm}
-	tob := util.SpeedsRequestInfo{Name: "Theatre Of Blood", DiscChan: s.config.DiscSpeedTOBChan, Bosses: util.HofSpeedTob}
-	tobhm := util.SpeedsRequestInfo{Name: "Theatre Of Blood Hard Mode", DiscChan: s.config.DiscSpeedTOBHMChan, Bosses: util.HofSpeedTobHm}
-	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan, Bosses: util.HofSpeedToa}
-	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan, Bosses: util.HofSpeedToae}
-	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan, Bosses: util.HofSpeedAgility}
-	dt2 := util.SpeedsRequestInfo{Name: "Desert Treasure 2", Bosses: util.HofSpeedDt2, DiscChan: s.config.DiscSpeedDt2Chan}
+	tzhaar := util.SpeedsRequestInfo{Name: "TzHaar", DiscChan: s.config.DiscSpeedTzhaarChan}
+	slayer := util.SpeedsRequestInfo{Name: "Slayer", DiscChan: s.config.DiscSpeedSlayerChan}
+	nightmare := util.SpeedsRequestInfo{Name: "Nightmare", DiscChan: s.config.DiscSpeedNightmareChan}
+	nex := util.SpeedsRequestInfo{Name: "Nex", DiscChan: s.config.DiscSpeedNexChan}
+	solo := util.SpeedsRequestInfo{Name: "Solo Bosses", DiscChan: s.config.DiscSpeedSoloChan}
+	cox := util.SpeedsRequestInfo{Name: "Chambers Of Xeric", DiscChan: s.config.DiscSpeedCOXChan}
+	coxcm := util.SpeedsRequestInfo{Name: "Chambers Of Xeric Challenge Mode", DiscChan: s.config.DiscSpeedCOXCMChan}
+	tob := util.SpeedsRequestInfo{Name: "Theatre Of Blood", DiscChan: s.config.DiscSpeedTOBChan}
+	tobhm := util.SpeedsRequestInfo{Name: "Theatre Of Blood Hard Mode", DiscChan: s.config.DiscSpeedTOBHMChan}
+	toa := util.SpeedsRequestInfo{Name: "Tombs Of Amascut", DiscChan: s.config.DiscSpeedTOAChan}
+	toae := util.SpeedsRequestInfo{Name: "Tombs Of Amascut Expert", DiscChan: s.config.DiscSpeedTOAEChan}
+	agility := util.SpeedsRequestInfo{Name: "Agility", DiscChan: s.config.DiscSpeedAgilityChan}
+	dt2 := util.SpeedsRequestInfo{Name: "Desert Treasure 2", DiscChan: s.config.DiscSpeedDt2Chan}
 
 	var allRequestInfo []util.SpeedsRequestInfo
 	for _, boss := range requestedBosses {
@@ -219,12 +228,12 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 		}
 
 		// Now add all the bosses
-		for _, bossInfo := range requestInfo.Bosses {
+		for _, bossName := range s.speedCategory[requestInfo.Name] {
 			// Get the speed info
-			speed := s.speed[bossInfo.BossName]
-			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossInfo.BossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
+			speed := s.speed[bossName]
+			err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
 			if err != nil {
-				logger.Error("Failed to send message for boss: " + bossInfo.BossName)
+				logger.Error("Failed to send message for boss: " + bossName)
 				return
 			}
 		}
