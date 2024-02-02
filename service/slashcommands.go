@@ -165,21 +165,29 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "update-instructions",
+					Name:        "instructions",
 					Description: "Update Submission instructions",
-					Type:        discordgo.ApplicationCommandOptionSubCommand,
-				},
-				{
-					Name:        "update-points",
-					Description: "Update Pp for player",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
+							Name:        "option",
+							Description: "Action to perform on speed",
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "player",
-							Description: "Player name",
 							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Update",
+									Value: "Update",
+								},
+							},
 						},
+					},
+				},
+				{
+					Name:        "points",
+					Description: "PP administration for player",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
 							Name:        "option",
@@ -195,8 +203,12 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 									Value: "Remove",
 								},
 							},
-						},
-						{
+						}, {
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "player",
+							Description: "Player name",
+							Required:    true,
+						}, {
 							Type:        discordgo.ApplicationCommandOptionInteger,
 							Name:        "amount-of-pp",
 							Description: "Amount of Pp to manage for player",
@@ -205,10 +217,34 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "reset-speed",
-					Description: "Reset Speed times",
+					Name:        "speed",
+					Description: "Speed Administration",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "option",
+							Description: "Action to perform on speed",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Add",
+									Value: "Add",
+								},
+								{
+									Name:  "Remove",
+									Value: "Remove",
+								},
+								{
+									Name:  "Update",
+									Value: "Update",
+								},
+								{
+									Name:  "Reset",
+									Value: "Reset",
+								},
+							},
+						},
 						{
 							Name:         "category",
 							Description:  "Category of speed",
@@ -217,20 +253,55 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 							Autocomplete: true,
 						},
 						{
-							Name:         "boss",
-							Description:  "Boss name submitting for",
+							Name:         "existing-boss",
+							Description:  "Existing boss name submitting for",
 							Type:         discordgo.ApplicationCommandOptionString,
-							Required:     true,
+							Required:     false,
 							Autocomplete: true,
+						},
+						{
+							Name:        "new-boss",
+							Description: "New Boss name adding to category selected",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    false,
+						},
+						{
+							Name:        "update-speed-time",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Description: "Only use if making a speed submission in format: hh:mm:ss.ms used for updating a submission",
+							Required:    false,
+						},
+						{
+							Name:        "update-player-names",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Description: "Comma separated list of players involved used for updating a submission",
+							Required:    false,
+						},
+						{
+							Name:        "imgur-url",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Description: "Imgur url used for updating a submission",
+							Required:    false,
 						},
 					},
 				},
 				{
-					Name:        "update-leaderboard",
-					Description: "Update Leaderboard for player",
+					Name:        "leaderboard",
+					Description: "Leaderboard administration for player",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
+							Name:        "option",
+							Description: "Action to perform on speed",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Update",
+									Value: "Update",
+								},
+							},
+						}, {
 							Type:         discordgo.ApplicationCommandOptionString,
 							Name:         "leaderboard",
 							Description:  "leaderboard name",
@@ -247,14 +318,42 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 					},
 				},
 				{
-					Name:        "update-sheets",
+					Name:        "sheets",
 					Description: "Update google sheets",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "option",
+							Description: "Action to perform on speed",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Update",
+									Value: "Update",
+								},
+							},
+						},
+					},
 				},
 				{
-					Name:        "update-guides-map",
+					Name:        "guides-map",
 					Description: "Update Guides that are stored in Map",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "option",
+							Description: "Action to perform on speed",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{
+									Name:  "Update",
+									Value: "Update",
+								},
+							},
+						},
+					},
 				},
 			},
 		},

@@ -29,13 +29,14 @@ type Service struct {
 	cpscreenshots    map[string]string
 	speed            map[string]util.SpeedInfo
 	speedscreenshots map[string]util.SpeedScInfo
-	log              flume.Logger
-	tid              int
 	members          map[string]util.MemberInfo
 	mainAndAlts      map[string][]string
 	templeUsernames  map[string]string
 	discGuides       map[string][]util.GuideInfo
+	speedCategory    map[string][]string
 
+	log                flume.Logger
+	tid                int
 	registeredCommands []*discordgo.ApplicationCommand
 
 	config *util.Config
@@ -66,13 +67,14 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		cpscreenshots:    make(map[string]string),
 		speed:            make(map[string]util.SpeedInfo),
 		speedscreenshots: make(map[string]util.SpeedScInfo),
-		log:              logger,
-		tid:              1,
 		members:          make(map[string]util.MemberInfo),
 		mainAndAlts:      make(map[string][]string),
 		templeUsernames:  make(map[string]string),
 		discGuides:       make(map[string][]util.GuideInfo),
+		speedCategory:    make(map[string][]string),
 
+		log:    logger,
+		tid:    1,
 		config: config,
 		client: client,
 
@@ -84,12 +86,19 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 func (s *Service) StartDiscordIRC() {
 	s.log.Info("Initializing OSRS Disc Bot...")
 	ctx := flume.WithLogger(context.Background(), s.log)
+
+	// Initialize from Sheets
 	s.sheets.InitializeCpFromSheet(ctx, s.cp)
 	s.sheets.InitializeSpeedsFromSheet(ctx, s.speed)
 	s.sheets.InitializeMembersFromSheet(ctx, s.members)
-	s.determineMainAndAlts(ctx, s.mainAndAlts)
-	s.pastebin.UpdateGuideList(ctx, s.discGuides)
 	s.tid = s.sheets.InitializeTIDFromSheet(ctx)
+
+	// Initialize from Pastebin
+	s.pastebin.UpdateGuideList(ctx, s.discGuides)
+
+	// Determine extra information
+	s.determineMainAndAlts(ctx)
+	s.determineSpeedCategory(ctx)
 
 	// Set templeUsernames to all lowercase to avoid issues with capitalization's and preserve original username
 	// capitalization for HOF and other leaderboards
@@ -154,7 +163,17 @@ func (s *Service) blockUntilInterrupt(ctx context.Context, session *discordgo.Se
 	s.scheduler.Stop()
 }
 
-func (s *Service) determineMainAndAlts(ctx context.Context, mainAndAlts map[string][]string) {
+func (s *Service) determineSpeedCategory(ctx context.Context) {
+	for bossName, speedInfo := range s.speed {
+		if _, ok := s.speedCategory[speedInfo.Category]; ok {
+			s.speedCategory[speedInfo.Category] = append(s.speedCategory[speedInfo.Category], bossName)
+		} else {
+			s.speedCategory[speedInfo.Category] = []string{bossName}
+		}
+	}
+}
+
+func (s *Service) determineMainAndAlts(ctx context.Context) {
 	// Key: Discord ID, Value: Name
 	altsBeforeMainIsFound := make(map[int][]string)
 	mainIdToName := make(map[int]string)
@@ -163,19 +182,19 @@ func (s *Service) determineMainAndAlts(ctx context.Context, mainAndAlts map[stri
 		if member.Main {
 			// If it exists within alts, move all the alt names to the mainAndAlts with the main as the key
 			if _, ok := altsBeforeMainIsFound[member.DiscordId]; ok {
-				mainAndAlts[memberName] = altsBeforeMainIsFound[member.DiscordId]
+				s.mainAndAlts[memberName] = altsBeforeMainIsFound[member.DiscordId]
 				mainIdToName[member.DiscordId] = memberName
 				delete(altsBeforeMainIsFound, member.DiscordId)
 			} else {
 				// If it doesn't exist, just set the mainKcs object with the member object
 				mainIdToName[member.DiscordId] = memberName
-				mainAndAlts[memberName] = []string{}
+				s.mainAndAlts[memberName] = []string{}
 			}
 		} else {
 			// If it exists within the main, determine the main name by using the discord id and append it to the array
 			if _, ok := mainIdToName[member.DiscordId]; ok {
 				main := mainIdToName[member.DiscordId]
-				mainAndAlts[main] = append(mainAndAlts[main], memberName)
+				s.mainAndAlts[main] = append(s.mainAndAlts[main], memberName)
 			} else if _, ok := altsBeforeMainIsFound[member.DiscordId]; ok {
 				// Check to see if an altsBeforeMainIsFound exists - if it does, add it to that
 				altsBeforeMainIsFound[member.DiscordId] = append(altsBeforeMainIsFound[member.DiscordId], memberName)
@@ -195,14 +214,14 @@ func (s *Service) updateAllGoogleSheets(ctx context.Context) {
 	logger.Debug("Running cp sc sheets updates...")
 	s.sheets.UpdateCpScreenshotsSheet(ctx, s.cpscreenshots)
 	logger.Debug("Running speed updates...")
-	s.sheets.UpdateSpeedSheet(ctx, s.speed)
+	s.sheets.UpdateSpeedSheet(ctx, s.speed, s.speedCategory)
 	logger.Debug("Running speed sc sheets updates...")
 	s.sheets.UpdateSpeedScreenshotsSheet(ctx, s.speedscreenshots)
 	logger.Debug("Running tid sheets updates...")
 	s.sheets.UpdateTIDFromSheet(ctx, s.tid)
 	logger.Debug("Running members sheets updates...")
 	s.sheets.UpdateMembersSheet(ctx, s.members)
-	logger.Debug("Finished running sheets updates")
+	logger.Info("Finished running sheets updates")
 }
 
 // initCron will instantiate the HallOfFameRequestInfos and kick off the cron job

@@ -94,6 +94,7 @@ type SpeedInfo struct {
 	PlayersInvolved string    `json:"playersInvolved"`
 	Time            time.Time `json:"time"`
 	URL             string    `json:"url"`
+	Category        string    `json:"category"`
 }
 
 type GuideInfo struct {
@@ -146,7 +147,6 @@ type HofRequestInfo struct {
 
 type SpeedsRequestInfo struct {
 	Name     string
-	Bosses   []BossInfo
 	DiscChan string
 }
 
