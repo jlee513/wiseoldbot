@@ -101,11 +101,16 @@ func (g *GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, spee
 			header = false
 			continue
 		}
+		category := ""
 		bossName := ""
 		speedTime := ""
 		players := ""
 		url := ""
 		for _, cell := range row {
+			if len(category) == 0 {
+				category = cell.Value
+				continue
+			}
 			if len(bossName) == 0 {
 				bossName = cell.Value
 				continue
@@ -147,7 +152,7 @@ func (g *GoogleSheetsClient) InitializeSpeedsFromSheet(ctx context.Context, spee
 			}
 		}
 
-		speeds[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: players, URL: url}
+		speeds[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: players, URL: url, Category: category}
 	}
 }
 
@@ -325,7 +330,7 @@ func checkError(ctx context.Context, err error) {
 	}
 }
 
-func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo) {
+func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo, speedCategory map[string][]string) {
 	// If no screenshots need to be uploaded, skip
 	if len(speed) == 0 {
 		return
@@ -335,12 +340,17 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 	// Overwrite the rows
 	startingRow := 1
 
-	for _, name := range util.HofOrder {
-		sheet.Update(startingRow, 0, name)
-		sheet.Update(startingRow, 1, speed[name].Time.Format("15:04:05.00"))
-		sheet.Update(startingRow, 2, speed[name].PlayersInvolved)
-		sheet.Update(startingRow, 3, speed[name].URL)
-		startingRow++
+	for category := range util.HofSpeedCategories {
+		bosses := speedCategory[category]
+		sort.Strings(bosses)
+		for _, boss := range bosses {
+			sheet.Update(startingRow, 0, speed[boss].Category)
+			sheet.Update(startingRow, 1, boss)
+			sheet.Update(startingRow, 2, speed[boss].Time.Format("15:04:05.00"))
+			sheet.Update(startingRow, 3, speed[boss].PlayersInvolved)
+			sheet.Update(startingRow, 4, speed[boss].URL)
+			startingRow++
+		}
 	}
 
 	// Make sure call Synchronize to reflect the changes

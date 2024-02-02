@@ -268,13 +268,19 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 						{
 							Name:        "update-speed-time",
 							Type:        discordgo.ApplicationCommandOptionString,
-							Description: "Only use if making a speed submission in format: hh:mm:ss.ms",
+							Description: "Only use if making a speed submission in format: hh:mm:ss.ms used for updating a submission",
 							Required:    false,
 						},
 						{
 							Name:        "update-player-names",
 							Type:        discordgo.ApplicationCommandOptionString,
-							Description: "Comma separated list of players involved",
+							Description: "Comma separated list of players involved used for updating a submission",
+							Required:    false,
+						},
+						{
+							Name:        "imgur-url",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Description: "Imgur url used for updating a submission",
 							Required:    false,
 						},
 					},

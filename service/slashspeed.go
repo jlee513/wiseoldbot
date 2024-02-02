@@ -104,7 +104,7 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 	}
 
 	// Ensure the boss name is okay
-	if _, ok := util.SpeedBossNameToCategory[boss]; !ok {
+	if _, ok := s.speed[boss]; !ok {
 		logger.Error("Incorrect boss name: ", boss)
 		return "Incorrect boss name. Please look ensure to select one of the options for boss names."
 	}
@@ -140,9 +140,19 @@ func (s *Service) handleSpeedSubmissionAutocomplete(session *discordgo.Session, 
 	switch {
 	// In this case there are multiple autocomplete options. The Focused field shows which option user is focused on.
 	case data.Options[0].Focused:
-		choices = util.SpeedAutocompleteCategories
+		for category := range util.HofSpeedCategories {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  category,
+				Value: category,
+			})
+		}
 	case data.Options[1].Focused:
-		choices = util.AppendToHofSpeedArr(data.Options[0].Value.(string))
+		for _, boss := range s.speedCategory[data.Options[1].Value.(string)] {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  boss,
+				Value: boss,
+			})
+		}
 	}
 
 	err := util.InteractionRespondChoices(session, i, choices)
@@ -272,7 +282,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			s.updatePpLeaderboard(ctx, session)
 
 			// Update the boss leaderboard that was updated
-			s.updateSpeedHOF(ctx, session, util.SpeedBossNameToCategory[bossName])
+			s.updateSpeedHOF(ctx, session, s.speed[bossName].Category)
 
 		} else {
 			logger.Info("KEEP TIME FOR BOSS: " + bossName)
