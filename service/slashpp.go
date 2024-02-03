@@ -8,6 +8,7 @@ import (
 	"osrs-disc-bot/util"
 	"strconv"
 	"strings"
+	"time"
 )
 
 /* All the slash commands handling functions */
@@ -164,7 +165,10 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 			submissionUrl = s.imageservice.Upload(ctx, accessToken, resp.Body)
 		}
 
-		s.cpscreenshots[submissionUrl] = playersInvolved
+		s.cpscreenshots[time.Now().Format("2006-01-02 15:04:05")] = util.CpScInfo{
+			PlayersInvolved: playersInvolved,
+			URL:             submissionUrl,
+		}
 
 		// Update the Ponies Points
 		names := strings.Split(util.WhiteStripCommas(playersInvolved), ",")

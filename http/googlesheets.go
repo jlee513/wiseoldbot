@@ -302,7 +302,7 @@ func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]in
 UpdateCpScreenshotsSheet will take all the cpscreenshots map and store the imgur link along with the
 people who got that item in the Google Sheet
 */
-func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string) {
+func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]util.CpScInfo) {
 	// If no screenshots need to be uploaded, skip
 	if len(cpscreenshots) == 0 {
 		return
@@ -312,9 +312,10 @@ func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscr
 	// Append new rows into the sheets
 	startingRow := len(sheet.Rows)
 
-	for imgurUrl, players := range cpscreenshots {
-		sheet.Update(startingRow, 0, imgurUrl)
-		sheet.Update(startingRow, 1, players)
+	for submissionTime, scInfo := range cpscreenshots {
+		sheet.Update(startingRow, 0, submissionTime)
+		sheet.Update(startingRow, 1, scInfo.URL)
+		sheet.Update(startingRow, 2, scInfo.PlayersInvolved)
 		startingRow++
 	}
 

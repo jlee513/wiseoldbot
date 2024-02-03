@@ -26,7 +26,7 @@ type Service struct {
 	pastebin      pastebin
 
 	cp               map[string]int
-	cpscreenshots    map[string]string
+	cpscreenshots    map[string]util.CpScInfo
 	speed            map[string]util.SpeedInfo
 	speedscreenshots map[string]util.SpeedScInfo
 	members          map[string]util.MemberInfo
@@ -64,7 +64,7 @@ func NewService(config *util.Config, collectionLog collectionLog, sheets sheets,
 		pastebin:      pastebin,
 
 		cp:               make(map[string]int),
-		cpscreenshots:    make(map[string]string),
+		cpscreenshots:    make(map[string]util.CpScInfo),
 		speed:            make(map[string]util.SpeedInfo),
 		speedscreenshots: make(map[string]util.SpeedScInfo),
 		members:          make(map[string]util.MemberInfo),

@@ -7,6 +7,7 @@ import (
 	"osrs-disc-bot/util"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -160,5 +161,8 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 	if err != nil {
 		logger.Error("Failed to send message to cp information channel", err)
 	}
-	s.cpscreenshots[submissionUrl] = player
+	s.cpscreenshots[time.Now().Format("2006-01-02 15:04:05")] = util.CpScInfo{
+		PlayersInvolved: player,
+		URL:             submissionUrl,
+	}
 }

@@ -103,6 +103,11 @@ type GuideInfo struct {
 	DiscChan      string `json:"discChan"`
 }
 
+type CpScInfo struct {
+	PlayersInvolved string `json:"playersInvolved"`
+	URL             string `json:"submissionUrl"`
+}
+
 type SpeedScInfo struct {
 	PlayersInvolved string `json:"playersInvolved"`
 	Time            string `json:"time"`

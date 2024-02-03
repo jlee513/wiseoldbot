@@ -25,7 +25,7 @@ type sheets interface {
 	UpdateMembersSheet(ctx context.Context, members map[string]util.MemberInfo)
 	UpdateTIDFromSheet(ctx context.Context, tid int)
 	UpdateCpSheet(ctx context.Context, cp map[string]int)
-	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]string)
+	UpdateCpScreenshotsSheet(ctx context.Context, cpscreenshots map[string]util.CpScInfo)
 	UpdateSpeedSheet(ctx context.Context, speed map[string]util.SpeedInfo, speedCategory map[string][]string)
 	UpdateSpeedScreenshotsSheet(ctx context.Context, speedscreenshots map[string]util.SpeedScInfo)
 }
