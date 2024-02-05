@@ -489,6 +489,7 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 				Allow: discordgo.PermissionAllText,
 			},
 		},
+		ParentID: s.config.DiscFeedbackCategory,
 	})
 	if err != nil {
 		logger.Error("Failed to create private text channel: " + err.Error())

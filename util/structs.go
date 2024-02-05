@@ -35,6 +35,9 @@ type Config struct {
 	PastebinDevApiKey    string `mapstructure:"PASTEBIN_DEV_API_KEY"`
 	PastebinMainPasteKey string `mapstructure:"PASTEBIN_MAIN_PASTE_KEY"`
 
+	// Feedback Category
+	DiscFeedbackCategory string `mapstructure:"DISCORD_FEEDBACK_CATEGORY"`
+
 	//Guide Update
 	DiscGuideUpdateChan string `mapstructure:"DISCORD_GUIDE_UPDATE_CHANNEL"`
 
