@@ -24,12 +24,12 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		if err != nil {
 			s.log.Error("Failed to send admin interaction response: " + err.Error())
 		}
-		s.updatePpLeaderboard(ctx, session)
+		s.updateCpLeaderboard(ctx, session)
 	case "instructions":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
-		err := util.InteractionRespond(session, i, "Updating Ponies Point Instructions")
+		err := util.InteractionRespond(session, i, "Updating Clan Point Instructions")
 		if err != nil {
 			logger.Error("Failed to send interaction response: " + err.Error())
 		}
@@ -39,7 +39,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
-		returnMessage := s.updatePPPoints(ctx, session, i)
+		returnMessage := s.updateCpPoints(ctx, session, i)
 		err := util.InteractionRespond(session, i, returnMessage)
 		if err != nil {
 			logger.Error("Failed to send admin interaction response: " + err.Error())
@@ -339,14 +339,14 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 		}
 	}
 
-	err = util.DeleteBulkDiscordMessages(session, s.config.DiscPPInfoChan)
+	err = util.DeleteBulkDiscordMessages(session, s.config.DiscCpInfoChan)
 	if err != nil {
 		logger.Error("Failed to delete bulk discord messages: " + err.Error())
 	}
 
 	ppSubmissionInstruction := []string{
-		"# Instructions for Ponies Points Submissions",
-		"In order to manually submit for ponies points, use the /pp-submissions command. There will be **1 mandatory field** which is automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
+		"# Instructions for Clan Points Submissions",
+		"In order to manually submit for ponies points, use the /cp-submissions command. There will be **1 mandatory field** which is automatically placed in your chat box and there are 2 optional fields which needs to be selected when pressing the +2 more at the end of the chat box",
 		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
 		"## ******Mandatory Fields For Speed Submissions******",
 		"https://i.imgur.com/hi66ThP.png",
@@ -360,7 +360,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 		"### <:ponies:1197979241959145636> i-imgur-link\nThis allows you to put in an i.imgur.com url instead of an image upload",
 		"https://i.imgur.com/TaoiTLG.png",
 		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
-		"# ******PP Submission using screenshot******",
+		"# ******Cp Submission using screenshot******",
 		"https://i.imgur.com/FAFCyim.gif",
 		"\n✎﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏﹏\n",
 		"# What happens when your screenshot gets approved/denied",
@@ -371,7 +371,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 
 	logger.Debug("Running speed submission instruction update")
 	for _, msg := range ppSubmissionInstruction {
-		_, err := session.ChannelMessageSend(s.config.DiscPPInfoChan, msg)
+		_, err := session.ChannelMessageSend(s.config.DiscCpInfoChan, msg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
 			return "Failed to send message to cp information channel"
@@ -390,7 +390,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 
 	var cpInstructions []string
 	currentCategory := ""
-	currentString := "# The following items will count for Ponies Points"
+	currentString := "# The following items will count for Clan Points"
 
 	for _, item := range keys {
 		category := util.LootLogClanPoint[item]
@@ -403,7 +403,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	}
 
 	for _, msg := range cpInstructions {
-		_, err := session.ChannelMessageSend(s.config.DiscPPInfoChan, msg)
+		_, err := session.ChannelMessageSend(s.config.DiscCpInfoChan, msg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
 			return "Failed to send message to cp information channel"
@@ -697,20 +697,20 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 	return "Invalid player management option chosen."
 }
 
-func (s *Service) updatePPPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) updateCpPoints(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
 	options := i.ApplicationCommandData().Options[0].Options
 	logger := flume.FromContext(ctx)
 
 	player := ""
-	pp := 0
+	cp := 0
 	addOrRemove := ""
 
 	for _, option := range options {
 		switch option.Name {
 		case "player":
 			player = option.Value.(string)
-		case "amount-of-pp":
-			pp = int(option.Value.(float64))
+		case "amount-of-cp":
+			cp = int(option.Value.(float64))
 		case "option":
 			addOrRemove = option.Value.(string)
 		}
@@ -723,19 +723,19 @@ func (s *Service) updatePPPoints(ctx context.Context, session *discordgo.Session
 	for _, player := range listOfPlayers {
 		switch addOrRemove {
 		case "Add":
-			logger.Info("Adding " + strconv.Itoa(pp) + " ponies point(s) to " + player)
-			s.cp[player] += pp
+			logger.Info("Adding " + strconv.Itoa(cp) + " clan point(s) to " + player)
+			s.cp[player] += cp
 		case "Remove":
-			logger.Info("Removing " + strconv.Itoa(pp) + " ponies point(s) to " + player)
-			if s.cp[player]-pp < 0 {
+			logger.Info("Removing " + strconv.Itoa(cp) + " clan point(s) to " + player)
+			if s.cp[player]-cp < 0 {
 				s.cp[player] = 0
 			} else {
-				s.cp[player] -= pp
+				s.cp[player] -= cp
 			}
 		}
 	}
 
-	s.updatePpLeaderboard(ctx, session)
+	s.updateCpLeaderboard(ctx, session)
 
-	return "Successfully managed pp for " + player
+	return "Successfully managed cp for " + player
 }

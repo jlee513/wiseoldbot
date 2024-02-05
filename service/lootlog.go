@@ -36,7 +36,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 					logger.Debug("Player " + player + "'s main is: " + user)
 					player = user
 					s.cp[user] += 1
-					s.updatePpLeaderboard(context.Background(), session)
+					s.updateCpLeaderboard(context.Background(), session)
 					foundMain = true
 				}
 			}
@@ -46,7 +46,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 				return
 			}
 		}
-		s.updatePpLeaderboard(context.Background(), session)
+		s.updateCpLeaderboard(context.Background(), session)
 	} else if strings.Contains(msg, " just received a valuable drop:") {
 		index1 := strings.Index(msg, "drop:")
 		index2 := strings.Index(msg, "!")
@@ -69,7 +69,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 						logger.Debug("Player " + player + "'s main is: " + user)
 						player = user
 						s.cp[user] += 1
-						s.updatePpLeaderboard(context.Background(), session)
+						s.updateCpLeaderboard(context.Background(), session)
 						foundMain = true
 					}
 				}
@@ -79,7 +79,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 					return
 				}
 			}
-			s.updatePpLeaderboard(context.Background(), session)
+			s.updateCpLeaderboard(context.Background(), session)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return
@@ -106,7 +106,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 						logger.Debug("Player " + player + "'s main is: " + user)
 						player = user
 						s.cp[user] += 1
-						s.updatePpLeaderboard(context.Background(), session)
+						s.updateCpLeaderboard(context.Background(), session)
 						foundMain = true
 					}
 				}
@@ -116,7 +116,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 					return
 				}
 			}
-			s.updatePpLeaderboard(context.Background(), session)
+			s.updateCpLeaderboard(context.Background(), session)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return
@@ -156,7 +156,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 	logger.Info("Successfully uploaded lootlog imgur url: " + submissionUrl)
 
 	channel := s.checkOrCreateFeedbackChannel(ctx, session, "", 0, player)
-	feedBackMsg := "<@" + strconv.Itoa(s.members[player].DiscordId) + ">\nYour automatic loot log ponies point has been accepted\n\nAdded to main user: **" + player + "**\n\n" + message.Content + "\n" + submissionUrl
+	feedBackMsg := "<@" + strconv.Itoa(s.members[player].DiscordId) + ">\nYour automatic loot log clan point has been accepted\n\nAdded to main user: **" + player + "**\n\n" + message.Content + "\n" + submissionUrl
 	_, err = session.ChannelMessageSend(channel, feedBackMsg)
 	if err != nil {
 		logger.Error("Failed to send message to cp information channel", err)

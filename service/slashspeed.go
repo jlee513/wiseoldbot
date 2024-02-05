@@ -7,6 +7,7 @@ import (
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -80,7 +81,7 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 
 	// Ensure the player used is valid
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-	// instead of running a for loop inside a for loop when adding Ponies Points
+	// instead of running a for loop inside a for loop when adding Clan Points
 	whitespaceStrippedMessage := util.WhiteStripCommas(playersInvolved)
 	logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 	names := strings.Split(whitespaceStrippedMessage, ",")
@@ -269,17 +270,23 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 			logger.Info(fmt.Sprintf("Old time: %+v", s.speed[bossName].Time.Format("15:04:05.00")))
 			logger.Info(fmt.Sprintf("New Time: %+v", t.Format("15:04:05.00")))
-			s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl}
 
-			// Update the Ponies Points
+			// Determine category
+			for category, bosses := range s.speedCategory {
+				if slices.Contains(bosses, bossName) {
+					s.speed[bossName] = util.SpeedInfo{Time: t, PlayersInvolved: playersInvolved, URL: submissionUrl, Category: category}
+				}
+			}
+
+			// Update the Clan Points
 			names := strings.Split(util.WhiteStripCommas(playersInvolved), ",")
 			for _, name := range names {
-				logger.Debug("Adding Ponies Point to: " + name)
+				logger.Debug("Adding Clan Point to: " + name)
 				s.cp[name] += 1
 			}
 
 			// Update the cp leaderboard
-			s.updatePpLeaderboard(ctx, session)
+			s.updateCpLeaderboard(ctx, session)
 
 			// Update the boss leaderboard that was updated
 			s.updateSpeedHOF(ctx, session, s.speed[bossName].Category)

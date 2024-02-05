@@ -132,7 +132,7 @@ func (s *Service) StartDiscordIRC() {
 	// Kick off gocron for updating the Hall Of fame
 	s.initCron(ctx, session)
 	s.initSlashCommands(ctx, session)
-	s.updatePpLeaderboard(ctx, session)
+	s.updateCpLeaderboard(ctx, session)
 
 	s.log.Info("OSRS Disc Bot is now online!")
 	s.blockUntilInterrupt(ctx, session)

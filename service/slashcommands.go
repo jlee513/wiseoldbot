@@ -15,7 +15,7 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "speed-submission",
-			Description: "Speed submissions for ponies",
+			Description: "Speed submissions for clan",
 			Type:        discordgo.ChatApplicationCommand,
 			Options: []*discordgo.ApplicationCommandOption{
 				{
@@ -57,8 +57,8 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 			},
 		},
 		{
-			Name:        "pp-submission",
-			Description: "Ponies points submissions for ponies",
+			Name:        "cp-submission",
+			Description: "Clan points submissions",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -185,7 +185,7 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 				},
 				{
 					Name:        "points",
-					Description: "PP administration for player",
+					Description: "Clan points administration for player",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
@@ -210,8 +210,8 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 							Required:    true,
 						}, {
 							Type:        discordgo.ApplicationCommandOptionInteger,
-							Name:        "amount-of-pp",
-							Description: "Amount of Pp to manage for player",
+							Name:        "amount-of-cp",
+							Description: "Amount of cp to manage for player",
 							Required:    true,
 						},
 					},
@@ -387,10 +387,10 @@ func (s *Service) initSlashCommands(ctx context.Context, session *discordgo.Sess
 func (s *Service) slashCommands(session *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	switch i.ApplicationCommandData().Name {
-	case "pp-submission":
+	case "cp-submission":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		defer func() { s.tid++ }()
-		returnMessage := s.handlePPSubmission(ctx, session, i)
+		returnMessage := s.handleCpSubmission(ctx, session, i)
 		err := util.InteractionRespond(session, i, returnMessage)
 		if err != nil {
 			s.log.Error("Failed to send interaction response: " + err.Error())
@@ -423,7 +423,7 @@ func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.Me
 	case s.config.DiscCpApprovalChan:
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
 		defer func() { s.tid++ }()
-		s.handlePPApproval(ctx, session, r)
+		s.handleCpApproval(ctx, session, r)
 	case s.config.DiscSpeedApprovalChan:
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", r.Member.User.Username))
 		defer func() { s.tid++ }()

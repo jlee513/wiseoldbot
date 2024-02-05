@@ -60,7 +60,7 @@ func (g *GoogleSheetsClient) prepGoogleSheet(ctx context.Context, sheetId string
 }
 
 /*
-InitializeCpFromSheet will take all the clan points from the CP Google Sheet and populate the
+InitializeCpFromSheet will take all the clan points from the Cp Google Sheet and populate the
 cp map for use within the bot
 */
 func (g *GoogleSheetsClient) InitializeCpFromSheet(ctx context.Context, cp map[string]int) {
@@ -186,11 +186,11 @@ func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, mem
 			case 0:
 				player = cell.Value
 			case 1:
-				id, _ = strconv.Atoi(strings.Replace(cell.Value, "ponies", "", -1))
+				id, _ = strconv.Atoi(strings.Replace(cell.Value, "clan", "", -1))
 			case 2:
 				discordName = cell.Value
 			case 3:
-				feedback = strings.Replace(cell.Value, "ponies", "", -1)
+				feedback = strings.Replace(cell.Value, "clan", "", -1)
 				if len(feedback) == 0 {
 					missingFeedback[discordName] = player
 				} else {
@@ -208,7 +208,7 @@ func (g *GoogleSheetsClient) InitializeMembersFromSheet(ctx context.Context, mem
 		}
 	}
 
-	// If there are entries in the ponies members sheets that don't have feedback entries, check the ones that found the
+	// If there are entries in the clan members sheets that don't have feedback entries, check the ones that found the
 	// entries and set it (this is for alts)
 	for discordName, player := range missingFeedback {
 		if _, ok := foundFeedback[discordName]; ok {
@@ -238,9 +238,9 @@ func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map
 	// Then insert in all the information from members
 	for user, memberInfo := range members {
 		sheet.Update(row, 0, user)
-		sheet.Update(row, 1, "ponies"+strconv.Itoa(memberInfo.DiscordId))
+		sheet.Update(row, 1, "clan"+strconv.Itoa(memberInfo.DiscordId))
 		sheet.Update(row, 2, memberInfo.DiscordName)
-		sheet.Update(row, 3, "ponies"+memberInfo.Feedback)
+		sheet.Update(row, 3, "clan"+memberInfo.Feedback)
 		sheet.Update(row, 4, strconv.FormatBool(memberInfo.Main))
 		row++
 	}
@@ -260,7 +260,7 @@ func (g *GoogleSheetsClient) UpdateTIDFromSheet(ctx context.Context, tid int) {
 
 /*
 UpdateCpSheet will take the cp map that was being locally updated and save it to the
-CP Google Sheets
+Cp Google Sheets
 */
 func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]int) {
 	sheet := g.prepGoogleSheet(ctx, g.cpSheet)

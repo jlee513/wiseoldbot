@@ -206,8 +206,8 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	}
 }
 
-// updatePpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
-func (s *Service) updatePpLeaderboard(ctx context.Context, session *discordgo.Session) {
+// updateCpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
+func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Session) {
 	logger := flume.FromContext(ctx)
 	// Update the #cp-leaderboard
 	keys := make([]string, 0, len(s.cp))
@@ -229,19 +229,19 @@ func (s *Service) updatePpLeaderboard(ctx context.Context, session *discordgo.Se
 	}
 
 	// Retrieve the one channel message and delete it in the leaderboard channel
-	messages, err := session.ChannelMessages(s.config.DiscPPLeaderboardChan, 1, "", "1196540063564177561", "")
+	messages, err := session.ChannelMessages(s.config.DiscCpLeaderboardChan, 1, "", "1196540063564177561", "")
 	if err != nil {
 		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
-	err = session.ChannelMessageDelete(s.config.DiscPPLeaderboardChan, messages[0].ID)
+	err = session.ChannelMessageDelete(s.config.DiscCpLeaderboardChan, messages[0].ID)
 	if err != nil {
 		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 
 	// Send the Discord Embed message
-	err = util.SendDiscordEmbedMsg(session, s.config.DiscPPLeaderboardChan, "Ponies Points Leaderboard", leaderboard, "https://i.imgur.com/wbxOjrR.jpeg")
+	err = util.SendDiscordEmbedMsg(session, s.config.DiscCpLeaderboardChan, "Ponies Points Leaderboard", leaderboard, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
 		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL: " + err.Error())
 		return

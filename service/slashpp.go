@@ -12,7 +12,7 @@ import (
 )
 
 /* All the slash commands handling functions */
-func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
+func (s *Service) handleCpSubmission(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) string {
 	logger := flume.FromContext(ctx)
 	options := i.ApplicationCommandData().Options
 
@@ -31,7 +31,7 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 		}
 	}
 
-	logger.Info("PP submission created by: " + i.Member.User.Username)
+	logger.Info("Cp submission created by: " + i.Member.User.Username)
 
 	// Can only have either a screenshot or an imgur link
 	url := ""
@@ -59,7 +59,7 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 
 	// Ensure the player used is valid
 	// Split the names into an array by , then make an empty array with those names as keys for an easier lookup
-	// instead of running a for loop inside a for loop when adding Ponies Points
+	// instead of running a for loop inside a for loop when adding Clan Points
 	whitespaceStrippedMessage := util.WhiteStripCommas(playersInvolved)
 	logger.Debug("Submitted names: " + whitespaceStrippedMessage)
 	names := strings.Split(whitespaceStrippedMessage, ",")
@@ -100,14 +100,14 @@ func (s *Service) handlePPSubmission(ctx context.Context, session *discordgo.Ses
 	}
 
 	// If nothing wrong happened, send a happy message back to the submitter
-	return "Ponies points successfully submitted! Awaiting approval from a moderator!"
+	return "Clan points successfully submitted! Awaiting approval from a moderator!"
 }
 
-func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Session, r *discordgo.MessageReactionAdd) {
+func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	logger := flume.FromContext(ctx)
 	switch r.Emoji.Name {
 	case "✅":
-		logger.Info("Ponies Point submission approved by: " + r.Member.User.Username)
+		logger.Info("Clan Point submission approved by: " + r.Member.User.Username)
 		msg, _ := session.ChannelMessage(s.config.DiscCpApprovalChan, r.MessageID)
 
 		index := strings.Index(msg.Content, "Submitter:")
@@ -121,7 +121,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 		index = strings.Index(msg.Content, "Involved:")
 		index2 = strings.Index(msg.Content, "https://")
 		playersInvolved := msg.Content[index+10 : index2-1]
-		logger.Info("CP Approved for: " + playersInvolved)
+		logger.Info("Cp Approved for: " + playersInvolved)
 
 		submissionUrl := ""
 
@@ -130,7 +130,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 		if err != nil {
 			logger.Error("Failed to delete cp approval message: " + err.Error())
 		}
-		logger.Debug("Successfully added CPs for: " + playersInvolved)
+		logger.Debug("Successfully added Cps for: " + playersInvolved)
 
 		// If the url is an imgur link, skip uploading to imgur
 		if strings.Contains(msg.Content, "https://i.imgur.com") {
@@ -170,26 +170,26 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 			URL:             submissionUrl,
 		}
 
-		// Update the Ponies Points
+		// Update the Clan Points
 		names := strings.Split(util.WhiteStripCommas(playersInvolved), ",")
 		for _, name := range names {
-			logger.Debug("Adding Ponies Point to: " + name)
+			logger.Debug("Adding Clan Point to: " + name)
 			s.cp[name] += 1
 		}
 
 		// Update the cp leaderboard
-		s.updatePpLeaderboard(ctx, session)
+		s.updateCpLeaderboard(ctx, session)
 
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour ponies point submission has been accepted\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)
 		}
 	case "❌":
-		logger.Info("Ponies Point submission denied by: " + r.Member.User.Username)
+		logger.Info("Clan Point submission denied by: " + r.Member.User.Username)
 
 		msg, _ := session.ChannelMessage(s.config.DiscCpApprovalChan, r.MessageID)
 
@@ -204,7 +204,7 @@ func (s *Service) handlePPApproval(ctx context.Context, session *discordgo.Sessi
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour ponies point submission has been rejected\n\n" + msg.Content[index:]
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			logger.Error("Failed to send message to cp information channel", err)

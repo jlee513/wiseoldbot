@@ -9,9 +9,9 @@ type Config struct {
 	DiscGuildId           string `mapstructure:"DISCORD_GUILD_ID"`
 	DiscBotToken          string `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscSubChan           string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
-	DiscPPLeaderboardChan string `mapstructure:"DISCORD_PP_LEADERBOARD_CHANNEL"`
+	DiscCpLeaderboardChan string `mapstructure:"DISCORD_CP_LEADERBOARD_CHANNEL"`
 	DiscSpeedSubInfoChan  string `mapstructure:"DISCORD_SPEED_SUB_INFO_CHANNEL"`
-	DiscPPInfoChan        string `mapstructure:"DISCORD_PP_INFO_CHANNEL"`
+	DiscCpInfoChan        string `mapstructure:"DISCORD_CP_INFO_CHANNEL"`
 
 	// Submission Approval Channels
 	DiscCpApprovalChan    string `mapstructure:"DISCORD_CP_APPROVAL_CHANNEL"`
