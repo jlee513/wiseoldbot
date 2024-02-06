@@ -435,7 +435,7 @@ func (s *Service) submissionApproval(session *discordgo.Session, r *discordgo.Me
 	}
 }
 
-func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *discordgo.Session, user string, userId int, name string) string {
+func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *discordgo.Session, user string, userId int, name string, invokedUser *discordgo.User) string {
 	logger := flume.FromContext(ctx)
 
 	if len(name) > 0 {
@@ -492,7 +492,7 @@ func (s *Service) checkOrCreateFeedbackChannel(ctx context.Context, session *dis
 		ParentID: s.config.DiscFeedbackCategory,
 	})
 	if err != nil {
-		logger.Error("Failed to create private text channel: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to create private text channel: "+err.Error())
 	}
 	s.members[name] = util.MemberInfo{
 		DiscordId:   s.members[name].DiscordId,

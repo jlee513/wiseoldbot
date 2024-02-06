@@ -37,18 +37,21 @@ func (s *Service) handleCpSubmission(ctx context.Context, session *discordgo.Ses
 	url := ""
 	if len(screenshot) == 0 && len(imgurUrl) == 0 {
 		// If none of these are submitted, check to see if the image is dragged in as an attachment
-		if i.Message != nil && len(i.Message.Attachments) == 0 {
-			logger.Error("No screenshot has been submitted")
+		if i.Message == nil {
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "No screenshot has been submitted")
+			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
+		} else if i.Message != nil && len(i.Message.Attachments) == 0 {
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "No screenshot has been submitted")
 			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
 		} else {
 			screenshot = i.Message.Attachments[0].ProxyURL
 		}
 	} else if len(screenshot) > 0 && len(imgurUrl) > 0 {
-		logger.Error("Two screenshots has been submitted")
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Two screenshots has been submitted")
 		return "Two images has been submitted - please provide either a screenshot or an imgur link in their respective sections, not both."
 	} else if len(imgurUrl) > 0 {
 		if !strings.Contains(imgurUrl, "https://i.imgur.com") {
-			logger.Error("Incorrect link used in imgur url submission: " + imgurUrl)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Incorrect link used in imgur url submission: "+imgurUrl)
 			return "Incorrect link used in imgur url submission, please use https://i.imgur.com when submitting using the imgur url option."
 		} else {
 			url = imgurUrl
@@ -72,13 +75,13 @@ func (s *Service) handleCpSubmission(ctx context.Context, session *discordgo.Ses
 
 			for user, member := range s.members {
 				if discordId == member.DiscordId && member.Main {
-					logger.Error("Player " + name + "'s main is: " + user + " - resubmit is required")
+					util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Player "+name+"'s main is: "+user+" - resubmit is required")
 					return "Player " + name + "'s main is: " + user + ". Please resubmit using the main username."
 				}
 			}
 
 			// We have a submission for an unknown person, throw an error
-			logger.Error("Unknown player submitted: " + name)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Unknown player submitted: "+name)
 			return "Please ensure all the names are correct or sign-up the following person: " + name
 		} else {
 			checkedNames = append(checkedNames, name)
@@ -90,7 +93,7 @@ func (s *Service) handleCpSubmission(ctx context.Context, session *discordgo.Ses
 	// If we have the submission is valid, send the submission information to the admin channel
 	msg, err := session.ChannelMessageSend(s.config.DiscCpApprovalChan, msgToBeApproved)
 	if err != nil {
-		logger.Error("Failed to send message to admin channel", err)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send message to admin channel: "+err.Error())
 		return "Issue with submitting, please contact a dev to fix this issue."
 	} else {
 		logger.Info("Submission sent to moderators for approval")
@@ -128,7 +131,7 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		// Delete the screenshot in the page
 		err := session.ChannelMessageDelete(s.config.DiscCpApprovalChan, r.MessageID)
 		if err != nil {
-			logger.Error("Failed to delete cp approval message: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to delete cp approval message: "+err.Error())
 		}
 		logger.Debug("Successfully added Cps for: " + playersInvolved)
 
@@ -139,7 +142,7 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 			// Retrieve the bytes of the image
 			resp, err := s.client.Get(msg.Embeds[0].URL)
 			if err != nil {
-				logger.Error("Failed to download discord image: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to download discord image: "+err.Error())
 				return
 			}
 			defer resp.Body.Close()
@@ -151,7 +154,7 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 				counter := 0
 				for err != nil {
 					if counter == 10 {
-						logger.Error("Failed to get access token for imgur: " + err.Error())
+						util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to get access token for imgur: "+err.Error())
 						return
 					}
 					accessToken, err = s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
@@ -178,15 +181,15 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		}
 
 		// Update the cp leaderboard
-		s.updateCpLeaderboard(ctx, session)
+		s.updateCpLeaderboard(ctx, session, r.Member.User)
 
 		// Send feedback to user
-		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
+		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Players Involved:")
 		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 		}
 	case "❌":
 		logger.Info("Clan Point submission denied by: " + r.Member.User.Username)
@@ -202,18 +205,18 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		// Send feedback to user
-		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
+		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Players Involved:")
 		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 		}
 
 		// Delete the screenshot in the page
 		err = session.ChannelMessageDelete(s.config.DiscCpApprovalChan, r.MessageID)
 		if err != nil {
-			logger.Error("Failed to delete cp approval message: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to delete cp approval message: "+err.Error())
 		}
 	}
 }

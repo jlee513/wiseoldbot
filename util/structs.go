@@ -8,6 +8,7 @@ type Config struct {
 
 	DiscGuildId           string `mapstructure:"DISCORD_GUILD_ID"`
 	DiscBotToken          string `mapstructure:"DISCORD_BOT_TOKEN"`
+	DiscBotId             string `mapstructure:"DISCORD_BOT_ID"`
 	DiscSubChan           string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
 	DiscCpLeaderboardChan string `mapstructure:"DISCORD_CP_LEADERBOARD_CHANNEL"`
 	DiscSpeedSubInfoChan  string `mapstructure:"DISCORD_SPEED_SUB_INFO_CHANNEL"`
@@ -34,6 +35,9 @@ type Config struct {
 	PastebinPassword     string `mapstructure:"PASTEBIN_PASSWORD"`
 	PastebinDevApiKey    string `mapstructure:"PASTEBIN_DEV_API_KEY"`
 	PastebinMainPasteKey string `mapstructure:"PASTEBIN_MAIN_PASTE_KEY"`
+
+	// Audit Channel
+	DiscAuditChan string `mapstructure:"DISC_AUDIT_CHAN"`
 
 	// Feedback Category
 	DiscFeedbackCategory string `mapstructure:"DISCORD_FEEDBACK_CATEGORY"`

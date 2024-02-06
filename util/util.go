@@ -3,10 +3,29 @@ package util
 import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gemalto/flume"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func LogError(logger flume.Logger, auditChannel string, session *discordgo.Session, user string, userUrl string, errorMessage string) {
+	err := SendDiscordEmbedMsg(session, auditChannel, "Error: "+user, errorMessage, userUrl)
+	if err != nil {
+		logger.Error("ERROR SENDING MESSAGE: " + errorMessage + " TO AUDIT CHANNEL - " + err.Error())
+		return
+	}
+	logger.Error(errorMessage)
+}
+
+func LogAdminAction(logger flume.Logger, auditChannel string, admin string, adminUrl string, session *discordgo.Session, adminMessage string) {
+	err := SendDiscordEmbedMsg(session, auditChannel, "Admin Action: "+admin, adminMessage, adminUrl)
+	if err != nil {
+		logger.Error("ERROR SENDING MESSAGE: " + adminMessage + " TO AUDIT CHANNEL - " + err.Error())
+		return
+	}
+	logger.Info(adminMessage)
+}
 
 func CalculateTime(speedTime string) time.Time {
 	var t time.Time
