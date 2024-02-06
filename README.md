@@ -121,6 +121,7 @@ Here's an overview of features available:
 * Leaderboards/Hall Of Fame based off of these metrics
 * Automatic Clan Point addition based off the Better Discord Loot Logger plugin on Runelite
 * Feedback Discord Channel that populates when a decision has been made about a submission
+* Audit Logs Discord Channel that populates with admin actions and errors
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -291,6 +292,11 @@ When it comes to players, we know that many people can have an account that they
 ![Main][main-screenshot]
 
 In this example above, the clan points and speed times will be tracked under the player "Mager". However, since "sry lil bro" is in the clan but is not the main, all speed times/clan points/kcs will be added and displayed under "Mager".
+
+### Audit Logs
+It is nice to see whenever something either goes wrong with the bot or an admin invoked a particular command. All error logs as well as admin invoked commands are sent off to the audit logs discord channel. All admin actions document the command invoked, all options supplied with the command, and who invoked it. All error logs document who invoked it as well as the error message.
+
+![auditlog][auditlog-screenshot]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -488,6 +494,7 @@ Project Link: [https://github.com/jlee513/wiseoldbot](https://github.com/jlee513
 [speedsubmit-gif]: images/speedsubmit.gif
 [speedapproval-screenshot]: images/speedapproval.jpg
 [feedbackspeed-screenshot]: images/feedbackspeed.png
+[auditlog-screenshot]: images/auditlog.png
 [Golang]: https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white
 [Golang-url]: https://go.dev/
 

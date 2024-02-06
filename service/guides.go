@@ -33,23 +33,23 @@ func (s *Service) guideAdminCommand(ctx context.Context, session *discordgo.Sess
 		if _, ok := s.discGuides[guide]; ok {
 			err := util.InteractionRespond(session, i, "Updating guide: "+guide)
 			if err != nil {
-				logger.Error("Failed to send guide interaction response: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send guide interaction response: "+err.Error())
 			}
 			logger.Debug("Updating guide: " + msg)
-			s.updateGuide(ctx, session, guide)
+			s.updateGuide(ctx, session, guide, i)
 		} else {
 			err := util.InteractionRespond(session, i, "Unknown guide chosen: "+guide)
 			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 			}
-			logger.Error("Unknown guide chosen: " + guide)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Unknown guide chosen: "+guide)
 		}
 	default:
 		err := util.InteractionRespond(session, i, "Invalid guide management option chosen: "+option)
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
-		logger.Error("Invalid guide management option chosen.")
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Invalid guide management option chosen.")
 	}
 }
 
@@ -72,7 +72,7 @@ func (s *Service) guideAdminAutocomplete(session *discordgo.Session, i *discordg
 	}
 }
 
-func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, guideName string) {
+func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, guideName string, i *discordgo.InteractionCreate) {
 	logger := flume.FromContext(ctx)
 	guideInfos := s.discGuides[guideName]
 	logger.Info("Updating guide: " + guideName + "...")
@@ -84,7 +84,7 @@ func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, g
 
 		err := util.DeleteBulkDiscordMessages(session, guideInfo.DiscChan)
 		if err != nil {
-			logger.Error("Failed to delete bulk discord messages: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to delete bulk discord messages: "+err.Error())
 		}
 		for _, line := range guideArr {
 			// Remove leading and trailing whitespaces
@@ -94,7 +94,7 @@ func (s *Service) updateGuide(ctx context.Context, session *discordgo.Session, g
 			}
 			_, err := session.ChannelMessageSend(guideInfo.DiscChan, line)
 			if err != nil {
-				logger.Error("ERROR SENDING MESSAGE: " + line + " TO: " + guideInfo.GuidePageName + " - " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "ERROR SENDING MESSAGE: "+line+" TO: "+guideInfo.GuidePageName+" - "+err.Error())
 				return
 			}
 		}

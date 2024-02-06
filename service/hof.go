@@ -16,7 +16,7 @@ updateKcHOF will iterate over all the HallOfFameRequestInfos, grab the podium fr
 of the bosses, sort them, and make the discord call to create the emded with the boss name, image,
 and podium finish with [kc]
 */
-func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) {
 	logger := flume.FromContext(ctx)
 	hofLeaderboard := make(map[string]int)
 
@@ -79,7 +79,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 			// First, delete all the messages within the channel
 			err := util.DeleteBulkDiscordMessages(session, kcItem.DiscChan)
 			if err != nil {
-				logger.Error("Failed to delete discord messages: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to delete discord messages: "+err.Error())
 			}
 
 			// For each of the bosses, we need to iterate over the list of mainAndAlts to add them up
@@ -157,7 +157,7 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 				// Send the Discord Embed message for the boss podium finish
 				err = util.SendDiscordEmbedMsg(session, kcItem.DiscChan, bossName, placements, boss.ImageLink)
 				if err != nil {
-					logger.Error("Failed to send message for boss: " + bossName)
+					util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for boss: "+bossName)
 					return
 				}
 			}
@@ -165,11 +165,11 @@ func (s *Service) updateKcHOF(ctx context.Context, session *discordgo.Session) {
 	}
 
 	wg.Wait()
-	s.updateHOFLeaderboard(ctx, session, hofLeaderboard)
+	s.updateHOFLeaderboard(ctx, session, hofLeaderboard, invokedUser)
 	logger.Info("Successfully updated KC Hall Of Fame")
 }
 
-func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session, requestedBosses ...string) {
+func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User, requestedBosses ...string) {
 	logger := flume.FromContext(ctx)
 
 	// HOF Speed
@@ -230,7 +230,7 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 			// First, delete all the messages within the channel
 			err := util.DeleteBulkDiscordMessages(session, requestInfo.DiscChan)
 			if err != nil {
-				logger.Error("Failed to bulk delete discord messages: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to bulk delete discord messages: "+err.Error())
 			}
 
 			// Now add all the bosses
@@ -239,7 +239,7 @@ func (s *Service) updateSpeedHOF(ctx context.Context, session *discordgo.Session
 				speed := s.speed[bossName]
 				err = util.SendDiscordEmbedMsg(session, requestInfo.DiscChan, bossName, "**Players:** "+speed.PlayersInvolved+"\n**Time:** "+speed.Time.Format("15:04:05.00"), speed.URL)
 				if err != nil {
-					logger.Error("Failed to send message for boss: " + bossName)
+					util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for boss: "+bossName)
 					return
 				}
 			}

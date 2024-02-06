@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"golang.org/x/text/language"
@@ -46,50 +47,54 @@ func (s *Service) updateLeaderboardCommand(session *discordgo.Session, i *discor
 
 	switch leaderboardName {
 	case "Kc":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked leaderboard kc command with options: option=%s, leaderboard=%s, thread=%s", action, leaderboardName, threadName))
 		logger.Info("Admin invoked Kc Hall Of Fame Update: ", i.Member.User.Username)
 		err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName)
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
 		// If kc is updating, always update all of them
-		s.updateKcHOF(ctx, session)
+		s.updateKcHOF(ctx, session, i.Member.User)
 	case "Speed":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked leaderboard speed command with options: option=%s, leaderboard=%s, thread=%s", action, leaderboardName, threadName))
 		logger.Info("Admin invoked Speed Hall Of Fame Update: ", i.Member.User.Username)
 		if _, ok := util.HofSpeedCategories[threadName]; ok {
 			err := util.InteractionRespond(session, i, "Updating Leaderboard: "+leaderboardName+" thread: "+threadName)
 			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 			}
-			s.updateSpeedHOF(ctx, session, threadName)
+			s.updateSpeedHOF(ctx, session, i.Member.User, threadName)
 		} else if strings.Compare(threadName, "All") == 0 {
 			err := util.InteractionRespond(session, i, "Updating All Speed Leaderboards")
 			if err != nil {
-				logger.Error("Failed to send interaction response: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 			}
-			s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
+			s.updateSpeedHOF(ctx, session, i.Member.User, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Chambers Of Xeric Challenge Mode", "Theatre Of Blood", "Theatre Of Blood Hard Mode", "Tombs Of Amascut", "Tombs Of Amascut Expert", "Agility", "Desert Treasure 2")
 		}
 	case "Leaderboard":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked leaderboard leaderboard command with options: option=%s, leaderboard=%s, thread=%s", action, leaderboardName, threadName))
 		logger.Info("Admin invoked Leaderboard Update: ", i.Member.User.Username)
 		err := util.InteractionRespond(session, i, "Updating Leaderboard: "+threadName)
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
 		// If kc is updating, always update all of them
-		s.updateColLog(ctx, session)
+		s.updateColLog(ctx, session, i.Member.User)
 	case "Milestones":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked leaderboard milestones command with options: option=%s, leaderboard=%s, thread=%s", action, leaderboardName, threadName))
 		logger.Info("Admin invoked Milestones Update: ", i.Member.User.Username)
 		err := util.InteractionRespond(session, i, "Updating Milestones: "+threadName)
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
 		// If kc is updating, always update all of them
-		s.updateTempleMilestones(ctx, session)
+		s.updateTempleMilestones(ctx, session, i.Member.User)
 	default:
 		err := util.InteractionRespond(session, i, "Unknown leaderboard submitted - please submit a proper leaderboard name")
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
-		logger.Error("Unknown leaderboard submitted - please submit a proper leaderboard name")
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Unknown leaderboard submitted - please submit a proper leaderboard name")
 	}
 }
 
@@ -162,7 +167,7 @@ func (s *Service) addToHOFLeaderboard(hofLeaderboard map[string]int, player stri
 	}
 }
 
-func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.Session, hofLeaderboard map[string]int) {
+func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.Session, hofLeaderboard map[string]int, invokedUser *discordgo.User) {
 	logger := flume.FromContext(ctx)
 	keys := make([]string, 0, len(hofLeaderboard))
 	for key := range hofLeaderboard {
@@ -177,7 +182,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	// First, delete all the messages within the channel
 	err := util.DeleteBulkDiscordMessages(session, s.config.DiscHOFLeaderboardChan)
 	if err != nil {
-		logger.Error("Failed to bulk delete discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to bulk delete discord messages: "+err.Error())
 	}
 
 	// Iterate over the players to get the different places for users to create the placements
@@ -190,7 +195,7 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	// Send the Discord Embed message for the leaderboard
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscHOFLeaderboardChan, "Ponies Hall Of Fame Leaderboard", placements, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("Failed to send message for hof leaderboard: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for hof leaderboard: "+err.Error())
 		return
 	}
 
@@ -201,13 +206,13 @@ func (s *Service) updateHOFLeaderboard(ctx context.Context, session *discordgo.S
 	msg = msg + "3 points for :first_place:\n2 points for :second_place:\n1 points for :third_place:"
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscHOFLeaderboardChan, "How To Get Onto The Ponies HOF Leaderboard", msg, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("Failed to send message for hof leaderboard instructions: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for hof leaderboard instructions: "+err.Error())
 		return
 	}
 }
 
 // updateCpLeaderboard will update the cp-leaderboard channel in discord with a new ranking of everyone in the clan
-func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) {
 	logger := flume.FromContext(ctx)
 	// Update the #cp-leaderboard
 	keys := make([]string, 0, len(s.cp))
@@ -231,19 +236,19 @@ func (s *Service) updateCpLeaderboard(ctx context.Context, session *discordgo.Se
 	// Retrieve the one channel message and delete it in the leaderboard channel
 	messages, err := session.ChannelMessages(s.config.DiscCpLeaderboardChan, 1, "", "1196540063564177561", "")
 	if err != nil {
-		logger.Error("ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "ERROR RETRIEVING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 	err = session.ChannelMessageDelete(s.config.DiscCpLeaderboardChan, messages[0].ID)
 	if err != nil {
-		logger.Error("ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "ERROR DELETING MESSAGES FROM DISCORD LEADERBOARD CHANNEL")
 		return
 	}
 
 	// Send the Discord Embed message
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscCpLeaderboardChan, "Ponies Points Leaderboard", leaderboard, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "ERROR SENDING MESSAGES TO DISCORD LEADERBOARD CHANNEL: "+err.Error())
 		return
 	}
 }
@@ -253,7 +258,7 @@ updateColLog will use all the users within the in memory submission map to creat
 from collectionlog.net and their rankings. It will create an embed with the top 10 placements in
 discord.
 */
-func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) error {
+func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) error {
 	logger := flume.FromContext(ctx)
 	logger.Info("Running collection log hiscores update...")
 
@@ -279,13 +284,13 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	// First, delete all the messages within the channel
 	err := util.DeleteBulkDiscordMessages(session, s.config.DiscColChan)
 	if err != nil {
-		logger.Error("Failed to bulk delete discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to bulk delete discord messages: "+err.Error())
 	}
 
 	// Send the Discord Embed message for collection log
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "Collection Log Leaderboard", placements, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
-		logger.Error("Failed to send discord emded message" + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send discord emded message"+err.Error())
 		return err
 	}
 
@@ -298,20 +303,20 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	msg = msg + "5. Click Account at the top and then upload collection log\n"
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "How To Get Onto The Collection Log HOF", msg, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
-		logger.Error("Failed to send discord emded message" + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send discord emded message"+err.Error())
 		return err
 	}
 
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscColChan, "Steps To Reset Collection Log Locally", "https://i.imgur.com/2LT9Qby.png", "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
-		logger.Error("Failed to send discord emded message" + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send discord emded message"+err.Error())
 		return err
 	}
 
 	// We will now update the pet leaderboard
-	err = s.updatePetLeaderboard(ctx, session, coLog)
+	err = s.updatePetLeaderboard(ctx, session, coLog, invokedUser)
 	if err != nil {
-		logger.Error("Failed updating pet leaderboard: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed updating pet leaderboard: "+err.Error())
 		return err
 	}
 
@@ -319,7 +324,7 @@ func (s *Service) updateColLog(ctx context.Context, session *discordgo.Session) 
 	return nil
 }
 
-func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.Session, coLog map[string]util.CollectionLogInfo) error {
+func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.Session, coLog map[string]util.CollectionLogInfo, invokedUser *discordgo.User) error {
 	logger := flume.FromContext(ctx)
 	logger.Info("Running pet hiscores update...")
 
@@ -336,7 +341,7 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 	// First, delete all the messages within the channel
 	err := util.DeleteBulkDiscordMessages(session, s.config.DiscPetChan)
 	if err != nil {
-		logger.Error("Failed to bulk delete discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to bulk delete discord messages: "+err.Error())
 	}
 
 	// Create the leaderboard message that will be sent
@@ -354,7 +359,7 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 		// Send the Discord Embed message for collection log
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscPetChan, "Rank "+strconv.Itoa(placement+1)+": "+k, placements, "")
 		if err != nil {
-			logger.Error("Failed to send discord emded message" + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send discord emded message"+err.Error())
 			return err
 		}
 	}
@@ -366,7 +371,7 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 	msg = msg + "3. Upload collection log\n"
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscPetChan, "How To Get Onto The Pet HOF", msg, "https://i.imgur.com/otTd8Dg.png")
 	if err != nil {
-		logger.Error("Failed to send discord emded message" + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send discord emded message"+err.Error())
 		return err
 	}
 
@@ -375,14 +380,14 @@ func (s *Service) updatePetLeaderboard(ctx context.Context, session *discordgo.S
 	return nil
 }
 
-func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) {
 	logger := flume.FromContext(ctx)
 	logger.Info("Running Temple Milestones update.")
 
 	// First, delete all the messages within the channel
 	err := util.DeleteBulkDiscordMessages(session, s.config.DiscTempleMilestones)
 	if err != nil {
-		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to delete bulk discord messages: "+err.Error())
 	}
 
 	milestones := s.temple.GetMilestonesFromTemple(ctx)
@@ -445,7 +450,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(pvm) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "PVM Milestones", pvm, "https://i.imgur.com/Y1K2KRf.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -453,7 +458,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(skill) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "Skilling Milestones", skill, "https://i.imgur.com/hUAw2PF.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -461,7 +466,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(clues) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "Clues Milestones", clues, "https://i.imgur.com/g69Gnpd.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -469,7 +474,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(ehb) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "EHB Milestones", ehb, "https://i.imgur.com/jy9pbkl.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -477,7 +482,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(ehp) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "EHP Milestones", ehp, "https://i.imgur.com/i6zF4aa.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -485,7 +490,7 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	if len(pvp) > 0 {
 		err = util.SendDiscordEmbedMsg(session, s.config.DiscTempleMilestones, "PVP Milestones", pvp, "https://i.imgur.com/aqSJCNc.jpeg")
 		if err != nil {
-			logger.Error("Failed to send message for leagues podium.")
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 			return
 		}
 	}
@@ -493,14 +498,14 @@ func (s *Service) updateTempleMilestones(ctx context.Context, session *discordgo
 	logger.Info("Finished running Temple Milestones update.")
 }
 
-func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session) {
+func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) {
 	logger := flume.FromContext(ctx)
 	logger.Info("Running leagues hiscores update.")
 
 	// First, delete all the messages within the channel
 	err := util.DeleteBulkDiscordMessages(session, s.config.DiscLeaguesChan)
 	if err != nil {
-		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to delete bulk discord messages: "+err.Error())
 	}
 
 	leaguesPodium, ranking := s.runescape.GetLeaguesPodiumFromRS(ctx, s.cp)
@@ -561,7 +566,7 @@ func (s *Service) updateLeagues(ctx context.Context, session *discordgo.Session)
 	// Send the Discord Embed message for the boss podium finish
 	err = util.SendDiscordEmbedMsg(session, s.config.DiscLeaguesChan, "Ponies Trailblazer Reloaded League Standings", placements, "https://i.imgur.com/wbxOjrR.jpeg")
 	if err != nil {
-		logger.Error("Failed to send message for leagues podium.")
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message for leagues podium.")
 		return
 	}
 

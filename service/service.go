@@ -132,7 +132,8 @@ func (s *Service) StartDiscordIRC() {
 	// Kick off gocron for updating the Hall Of fame
 	s.initCron(ctx, session)
 	s.initSlashCommands(ctx, session)
-	s.updateCpLeaderboard(ctx, session)
+	botUser, _ := session.User(s.config.DiscBotId)
+	s.updateCpLeaderboard(ctx, session, botUser)
 
 	s.log.Info("OSRS Disc Bot is now online!")
 	s.blockUntilInterrupt(ctx, session)
@@ -231,10 +232,11 @@ func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 	// Kick off a scheduled job at a configured time
 	job, err := s.scheduler.Every(1).Day().At(s.config.CronKickoffTime).Do(func() {
 		s.log.Debug("Running Cron Job to update the Hall Of Fame, Collection Log, and Leagues...")
-		s.updateKcHOF(ctx, session)
-		s.updateSpeedHOF(ctx, session, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Theatre Of Blood", "Tombs Of Amascut", "Agility")
-		s.updateColLog(ctx, session)
-		s.updateTempleMilestones(ctx, session)
+		botUser, _ := session.User(s.config.DiscBotId)
+		s.updateKcHOF(ctx, session, botUser)
+		s.updateSpeedHOF(ctx, session, botUser, "TzHaar", "Slayer", "Nightmare", "Nex", "Solo Bosses", "Chambers Of Xeric", "Theatre Of Blood", "Tombs Of Amascut", "Agility")
+		s.updateColLog(ctx, session, botUser)
+		s.updateTempleMilestones(ctx, session, botUser)
 		s.updateAllGoogleSheets(ctx)
 		s.log.Debug("Finished running Cron Job to update the Hall Of Fame, Collection Log, and Google Sheets!")
 	})

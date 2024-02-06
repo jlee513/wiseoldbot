@@ -36,17 +36,17 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 					logger.Debug("Player " + player + "'s main is: " + user)
 					player = user
 					s.cp[user] += 1
-					s.updateCpLeaderboard(context.Background(), session)
+					s.updateCpLeaderboard(context.Background(), session, message.Author)
 					foundMain = true
 				}
 			}
 
 			if !foundMain {
-				logger.Error("Rejected: Player " + player + " does not exist and neither does a main.")
+				util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Rejected: Player "+player+" does not exist and neither does a main.")
 				return
 			}
 		}
-		s.updateCpLeaderboard(context.Background(), session)
+		s.updateCpLeaderboard(context.Background(), session, message.Author)
 	} else if strings.Contains(msg, " just received a valuable drop:") {
 		index1 := strings.Index(msg, "drop:")
 		index2 := strings.Index(msg, "!")
@@ -69,17 +69,17 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 						logger.Debug("Player " + player + "'s main is: " + user)
 						player = user
 						s.cp[user] += 1
-						s.updateCpLeaderboard(context.Background(), session)
+						s.updateCpLeaderboard(context.Background(), session, message.Author)
 						foundMain = true
 					}
 				}
 
 				if !foundMain {
-					logger.Error("Rejected: Player " + player + " does not exist and neither does a main.")
+					util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Rejected: Player "+player+" does not exist and neither does a main.")
 					return
 				}
 			}
-			s.updateCpLeaderboard(context.Background(), session)
+			s.updateCpLeaderboard(context.Background(), session, message.Author)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return
@@ -106,17 +106,17 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 						logger.Debug("Player " + player + "'s main is: " + user)
 						player = user
 						s.cp[user] += 1
-						s.updateCpLeaderboard(context.Background(), session)
+						s.updateCpLeaderboard(context.Background(), session, message.Author)
 						foundMain = true
 					}
 				}
 
 				if !foundMain {
-					logger.Error("Rejected: Player " + player + " does not exist and neither does a main.")
+					util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Rejected: Player "+player+" does not exist and neither does a main.")
 					return
 				}
 			}
-			s.updateCpLeaderboard(context.Background(), session)
+			s.updateCpLeaderboard(context.Background(), session, message.Author)
 		} else {
 			logger.Debug("Rejected: Item " + item + " is not on the list.")
 			return
@@ -128,7 +128,7 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 	// Retrieve the bytes of the image
 	resp, err := s.client.Get(message.Attachments[0].ProxyURL)
 	if err != nil {
-		logger.Error("Failed to download discord image: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Failed to download discord image: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -139,9 +139,9 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 		// We will retry 10 times to get a new access token
 		counter := 0
 		for err != nil {
-			logger.Error("Failed to get access token for imgur, retrying... (count: " + strconv.Itoa(counter) + ")")
+			util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Failed to get access token for imgur, retrying... (count: "+strconv.Itoa(counter)+")")
 			if counter == 15 {
-				logger.Error("Failed to get access token for imgur: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Failed to get access token for imgur: "+err.Error())
 				return
 			}
 			accessToken, err = s.imageservice.GetNewAccessToken(context.Background(), s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
@@ -155,11 +155,11 @@ func (s *Service) listenForLootLog(ctx context.Context, session *discordgo.Sessi
 	submissionUrl := s.imageservice.Upload(context.Background(), accessToken, resp.Body)
 	logger.Info("Successfully uploaded lootlog imgur url: " + submissionUrl)
 
-	channel := s.checkOrCreateFeedbackChannel(ctx, session, "", 0, player)
+	channel := s.checkOrCreateFeedbackChannel(ctx, session, "", 0, player, message.Author)
 	feedBackMsg := "<@" + strconv.Itoa(s.members[player].DiscordId) + ">\nYour automatic loot log clan point has been accepted\n\nAdded to main user: **" + player + "**\n\n" + message.Content + "\n" + submissionUrl
 	_, err = session.ChannelMessageSend(channel, feedBackMsg)
 	if err != nil {
-		logger.Error("Failed to send message to cp information channel", err)
+		util.LogError(logger, s.config.DiscAuditChan, session, message.Author.Username, message.Author.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 	}
 	s.cpscreenshots[time.Now().Format("2006-01-02 15:04:05")] = util.CpScInfo{
 		PlayersInvolved: player,

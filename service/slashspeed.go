@@ -60,17 +60,17 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 	if len(screenshot) == 0 && len(imgurUrl) == 0 {
 		// If none of these are submitted, check to see if the image is dragged in as an attachment
 		if i.Message != nil && len(i.Message.Attachments) == 0 {
-			logger.Error("No screenshot has been submitted")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "No screenshot has been submitted")
 			return "No image has been submitted - please provide either a screenshot or an imgur link in their respective sections."
 		} else {
 			screenshot = i.Message.Attachments[0].ProxyURL
 		}
 	} else if len(screenshot) > 0 && len(imgurUrl) > 0 {
-		logger.Error("Two screenshots has been submitted")
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Two screenshots has been submitted")
 		return "Two images has been submitted - please provide either a screenshot or an imgur link in their respective sections, not both."
 	} else if len(imgurUrl) > 0 {
 		if !strings.Contains(imgurUrl, "https://i.imgur.com") {
-			logger.Error("Incorrect link used in imgur url submission: " + imgurUrl)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Incorrect link used in imgur url submission: "+imgurUrl)
 			return "Incorrect link used in imgur url submission, please use https://i.imgur.com when submitting using the imgur url option."
 		} else {
 			url = imgurUrl
@@ -93,27 +93,27 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 
 			for user, member := range s.members {
 				if discordId == member.DiscordId && member.Main {
-					logger.Error("Player " + name + "'s main is: " + user + " - resubmit is required")
+					util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Player "+name+"'s main is: "+user+" - resubmit is required")
 					return "Player " + name + "'s main is: " + user + ". Please resubmit using the main username."
 				}
 			}
 
 			// We have a submission for an unknown person, throw an error
-			logger.Error("Unknown player submitted: " + name)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Unknown player submitted: "+name)
 			return "Please ensure all the names are correct or sign-up the following person: " + name
 		}
 	}
 
 	// Ensure the boss name is okay
 	if _, ok := s.speed[boss]; !ok {
-		logger.Error("Incorrect boss name: ", boss)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Incorrect boss name: "+boss)
 		return "Incorrect boss name. Please look ensure to select one of the options for boss names."
 	}
 
 	// Ensure the format is hh:mm:ss:mmm
 	reg := regexp.MustCompile("^\\d\\d:\\d\\d:\\d\\d\\.\\d\\d$")
 	if !reg.Match([]byte(speedTime)) {
-		logger.Error("Invalid time format: ", speedTime)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Invalid time format: "+speedTime)
 		return "Incorrect time format. Please use the following format: hh:mm:ss.ms"
 	}
 
@@ -122,7 +122,7 @@ func (s *Service) handleSpeedSubmissionCommand(ctx context.Context, session *dis
 	// If we have the submission is valid, send the submission information to the admin channel
 	msg, err := session.ChannelMessageSend(s.config.DiscSpeedApprovalChan, msgToBeApproved)
 	if err != nil {
-		logger.Error("Failed to send message to admin channel", err)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send message to admin channel: "+err.Error())
 		return "Issue with submitting the speed submission, please contact a dev to fix this issue."
 	} else {
 		logger.Info("Submission sent to moderators for approval")
@@ -193,7 +193,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		// Delete the screenshot in the page
 		err := session.ChannelMessageDelete(s.config.DiscSpeedApprovalChan, r.MessageID)
 		if err != nil {
-			logger.Error("Failed to delete cp approval message: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to delete cp approval message: "+err.Error())
 		}
 
 		submissionUrl := ""
@@ -205,7 +205,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			// Retrieve the bytes of the image
 			resp, err := s.client.Get(msg.Embeds[0].URL)
 			if err != nil {
-				logger.Error("Failed to download discord image: " + err.Error())
+				util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to download discord image: "+err.Error())
 				return
 			}
 			defer resp.Body.Close()
@@ -219,7 +219,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 				for err != nil {
 					logger.Debug("Failed to get imgur access token, will retry (attempt " + strconv.Itoa(counter) + ")")
 					if counter == 11 {
-						logger.Error("Failed to get access token for imgur: " + err.Error())
+						util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to get access token for imgur: "+err.Error())
 						return
 					}
 					accessToken, err = s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
@@ -265,7 +265,7 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 
 			_, err := session.ChannelMessageSend(s.config.DiscNewFastestTimeChan, newTimeMsg)
 			if err != nil {
-				logger.Error("Failed to send message to cp information channel", err)
+				util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 			}
 
 			logger.Info(fmt.Sprintf("Old time: %+v", s.speed[bossName].Time.Format("15:04:05.00")))
@@ -286,10 +286,10 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 			}
 
 			// Update the cp leaderboard
-			s.updateCpLeaderboard(ctx, session)
+			s.updateCpLeaderboard(ctx, session, r.Member.User)
 
 			// Update the boss leaderboard that was updated
-			s.updateSpeedHOF(ctx, session, s.speed[bossName].Category)
+			s.updateSpeedHOF(ctx, session, r.Member.User, s.speed[bossName].Category)
 
 		} else {
 			logger.Info("KEEP TIME FOR BOSS: " + bossName)
@@ -298,12 +298,12 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		}
 
 		// Send feedback to user
-		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
+		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Boss Name:")
 		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour speed submission has been accepted\n\n" + msg.Content[index:]
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 		}
 
 		logger.Debug("Successfully handled Speed Time for: " + playersInvolved)
@@ -319,18 +319,18 @@ func (s *Service) handleSpeedApproval(ctx context.Context, session *discordgo.Se
 		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
 		// Send feedback to user
-		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "")
+		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Boss Name:")
 		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour speed submission has been rejected\n\n" + msg.Content[index:]
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 		}
 
 		// Delete the screenshot in the page
 		err = session.ChannelMessageDelete(s.config.DiscSpeedApprovalChan, r.MessageID)
 		if err != nil {
-			logger.Error("Failed to delete cp approval message: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to delete cp approval message: "+err.Error())
 		}
 	}
 }

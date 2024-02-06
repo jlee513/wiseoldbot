@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gemalto/flume"
 	"osrs-disc-bot/util"
@@ -18,22 +19,24 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 	switch options[0].Name {
 	case "player":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
+		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
 		returnMessage := s.handlePlayerAdministration(ctx, session, i)
 		err := util.InteractionRespond(session, i, returnMessage)
 		if err != nil {
-			s.log.Error("Failed to send admin interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 		}
-		s.updateCpLeaderboard(ctx, session)
+		s.updateCpLeaderboard(ctx, session, i.Member.User)
 	case "instructions":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
 		defer func() { s.tid++ }()
 		err := util.InteractionRespond(session, i, "Updating Clan Point Instructions")
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
-		_ = s.updateSubmissionInstructions(ctx, session)
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, "Admin invoked instructions command")
+		_ = s.updateSubmissionInstructions(ctx, session, i.Member.User)
 		return
 	case "points":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
@@ -42,7 +45,7 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		returnMessage := s.updateCpPoints(ctx, session, i)
 		err := util.InteractionRespond(session, i, returnMessage)
 		if err != nil {
-			logger.Error("Failed to send admin interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 		}
 	case "speed":
 		s.speedAdmin(session, i)
@@ -54,18 +57,20 @@ func (s *Service) handleAdmin(session *discordgo.Session, i *discordgo.Interacti
 		defer func() { s.tid++ }()
 		err := util.InteractionRespond(session, i, "Updating Google Sheets")
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked sheets update command"))
 		s.updateAllGoogleSheets(ctx)
 		return
 	case "guides-map":
 		ctx := flume.WithLogger(context.Background(), s.log.With("transactionID", s.tid).With("user", i.Member.User.Username))
 		logger := flume.FromContext(ctx)
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked guides-map update command"))
 		defer func() { s.tid++ }()
 		logger.Info("Updating Guides stored in Map...")
 		err := util.InteractionRespond(session, i, "Updating Guides stored in Map")
 		if err != nil {
-			logger.Error("Failed to send interaction response: " + err.Error())
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send interaction response: "+err.Error())
 		}
 		s.pastebin.UpdateGuideList(ctx, s.discGuides)
 		for _, discGuidesInfos := range s.discGuides {
@@ -93,7 +98,7 @@ func (s *Service) speedAdmin(session *discordgo.Session, i *discordgo.Interactio
 
 func (s *Service) speedAdminCommand(ctx context.Context, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	options := i.ApplicationCommandData().Options[0].Options
-	//logger := flume.FromContext(ctx)
+	logger := flume.FromContext(ctx)
 
 	action := ""
 	category := ""
@@ -124,12 +129,16 @@ func (s *Service) speedAdminCommand(ctx context.Context, session *discordgo.Sess
 
 	switch action {
 	case "Reset":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked speed reset command with options: option=%s, category=%s, existing-boss=%s, new-boss=%s, update-speed-time=%s, update-player-names=%s, imgur-url=%s", action, category, existingBoss, newBoss, updateSpeedTime, updatePlayerNames, imgurUrl))
 		s.resetSpeed(ctx, session, i, existingBoss, category)
 	case "Add":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked speed add command with options: option=%s, category=%s, existing-boss=%s, new-boss=%s, update-speed-time=%s, update-player-names=%s, imgur-url=%s", action, category, existingBoss, newBoss, updateSpeedTime, updatePlayerNames, imgurUrl))
 		s.addNewSpeed(ctx, session, i, newBoss, category)
 	case "Update":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked speed update command with options: option=%s, category=%s, existing-boss=%s, new-boss=%s, update-speed-time=%s, update-player-names=%s, imgur-url=%s", action, category, existingBoss, newBoss, updateSpeedTime, updatePlayerNames, imgurUrl))
 		s.updateSpeed(ctx, session, i, existingBoss, category, updateSpeedTime, updatePlayerNames, imgurUrl)
 	case "Remove":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked speed remove command with options: option=%s, category=%s, existing-boss=%s, new-boss=%s, update-speed-time=%s, update-player-names=%s, imgur-url=%s", action, category, existingBoss, newBoss, updateSpeedTime, updatePlayerNames, imgurUrl))
 		s.removeSpeed(ctx, session, i, existingBoss, category)
 	}
 
@@ -141,12 +150,12 @@ func (s *Service) updateSpeed(ctx context.Context, session *discordgo.Session, i
 
 	err := util.InteractionRespond(session, i, "Updating speed for: "+existingBoss)
 	if err != nil {
-		logger.Error("Failed to send admin interaction response: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 	}
 
 	// Ensure the boss name exists
 	if _, ok := s.speed[existingBoss]; !ok {
-		logger.Error("Incorrect boss name: ", existingBoss)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Incorrect boss name: "+existingBoss)
 		return
 	}
 
@@ -159,7 +168,7 @@ func (s *Service) updateSpeed(ctx context.Context, session *discordgo.Session, i
 		// Ensure the format is hh:mm:ss:mmm
 		reg := regexp.MustCompile("^\\d\\d:\\d\\d:\\d\\d\\.\\d\\d$")
 		if !reg.Match([]byte(updateSpeedTime)) {
-			logger.Error("Invalid time format: ", updateSpeedTime)
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Invalid time format: "+updateSpeedTime)
 			return
 		}
 		speed = util.CalculateTime(updateSpeedTime)
@@ -186,7 +195,7 @@ func (s *Service) updateSpeed(ctx context.Context, session *discordgo.Session, i
 		Category:        category,
 	}
 
-	s.updateSpeedHOF(ctx, session, category)
+	s.updateSpeedHOF(ctx, session, i.Member.User, category)
 	logger.Info("Successfully updated speed for: " + existingBoss)
 }
 
@@ -196,19 +205,19 @@ func (s *Service) resetSpeed(ctx context.Context, session *discordgo.Session, i 
 
 	err := util.InteractionRespond(session, i, "Resetting speed for: "+existingBoss)
 	if err != nil {
-		logger.Error("Failed to send admin interaction response: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 	}
 
 	// Ensure the boss name is okay
 	if _, ok := s.speed[existingBoss]; !ok {
-		logger.Error("Incorrect boss name: ", existingBoss)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Incorrect boss name: "+existingBoss)
 		return
 	}
 
 	// Convert the time string into time
 	t := util.CalculateTime("22:22:22.60")
 	s.speed[existingBoss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png", Category: category}
-	s.updateSpeedHOF(ctx, session, category)
+	s.updateSpeedHOF(ctx, session, i.Member.User, category)
 	logger.Info("Successfully reset speed for: " + existingBoss)
 }
 
@@ -218,12 +227,12 @@ func (s *Service) addNewSpeed(ctx context.Context, session *discordgo.Session, i
 
 	err := util.InteractionRespond(session, i, "Adding new speed for: "+newBoss)
 	if err != nil {
-		logger.Error("Failed to send admin interaction response: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 	}
 
 	// Ensure the boss name is okay
 	if _, ok := s.speed[newBoss]; ok {
-		logger.Error("Inputted in existing boss: ", newBoss)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Inputted in existing boss: "+newBoss)
 		return
 	}
 
@@ -233,7 +242,7 @@ func (s *Service) addNewSpeed(ctx context.Context, session *discordgo.Session, i
 	// Convert the time string into time
 	t := util.CalculateTime("22:22:22.60")
 	s.speed[newBoss] = util.SpeedInfo{Time: t, PlayersInvolved: "null", URL: "https://i.imgur.com/34dg0da.png", Category: category}
-	s.updateSpeedHOF(ctx, session, category)
+	s.updateSpeedHOF(ctx, session, i.Member.User, category)
 	logger.Info("Successfully added speed for: " + newBoss)
 }
 
@@ -243,12 +252,12 @@ func (s *Service) removeSpeed(ctx context.Context, session *discordgo.Session, i
 
 	err := util.InteractionRespond(session, i, "Removing speed for: "+existingBoss)
 	if err != nil {
-		logger.Error("Failed to send admin interaction response: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Failed to send admin interaction response: "+err.Error())
 	}
 
 	// Ensure the boss name is okay
 	if _, ok := s.speed[existingBoss]; !ok {
-		logger.Error("Inputted in non-existant boss: ", existingBoss)
+		util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Inputted in non-existant boss: "+existingBoss)
 		return
 	}
 
@@ -261,7 +270,7 @@ func (s *Service) removeSpeed(ctx context.Context, session *discordgo.Session, i
 	}
 
 	delete(s.speed, existingBoss)
-	s.updateSpeedHOF(ctx, session, category)
+	s.updateSpeedHOF(ctx, session, i.Member.User, category)
 	logger.Info("Successfully removed speed for: " + existingBoss)
 }
 
@@ -292,7 +301,7 @@ func (s *Service) speedAdminAutocomplete(session *discordgo.Session, i *discordg
 	}
 }
 
-func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session) string {
+func (s *Service) updateSubmissionInstructions(ctx context.Context, session *discordgo.Session, invokedUser *discordgo.User) string {
 	returnMessage := "Successfully updated submission Instructions!"
 	logger := flume.FromContext(ctx)
 
@@ -334,14 +343,14 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	for _, msg := range speedSubmissionInstruction {
 		_, err := session.ChannelMessageSend(s.config.DiscSpeedSubInfoChan, msg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 			return "Failed to send message to cp information channel"
 		}
 	}
 
 	err = util.DeleteBulkDiscordMessages(session, s.config.DiscCpInfoChan)
 	if err != nil {
-		logger.Error("Failed to delete bulk discord messages: " + err.Error())
+		util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to delete bulk discord messages: "+err.Error())
 	}
 
 	ppSubmissionInstruction := []string{
@@ -373,7 +382,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	for _, msg := range ppSubmissionInstruction {
 		_, err := session.ChannelMessageSend(s.config.DiscCpInfoChan, msg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message to cp information channel:"+err.Error())
 			return "Failed to send message to cp information channel"
 		}
 	}
@@ -405,7 +414,7 @@ func (s *Service) updateSubmissionInstructions(ctx context.Context, session *dis
 	for _, msg := range cpInstructions {
 		_, err := session.ChannelMessageSend(s.config.DiscCpInfoChan, msg)
 		if err != nil {
-			logger.Error("Failed to send message to cp information channel", err)
+			util.LogError(logger, s.config.DiscAuditChan, session, invokedUser.Username, invokedUser.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
 			return "Failed to send message to cp information channel"
 		}
 	}
@@ -450,9 +459,10 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 
 	switch option {
 	case "Add":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked player add command with options: option=%s, name=%s, newName=%s, discordid=%d, discordname=%s, main=%t", option, name, newName, discordid, discordname, main))
 		// If add, ensure that discord-id and discord-name are there
 		if discordid == 0 || len(discordname) == 0 {
-			logger.Error("Discord ID and Discord Name are required for an addition to the clan")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Discord ID and Discord Name are required for an addition to the clan")
 			msg := "Discord ID and Discord Name are required for an addition to the clan"
 			return msg
 		}
@@ -460,7 +470,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 		// Ensure that this person does not exist in the members map
 		if _, ok := s.members[name]; ok {
 			// Send the failed addition message in the previously created private channel
-			logger.Error("Member: " + name + " already exists.")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Member: "+name+" already exists.")
 			msg := "Member: " + name + " already exists."
 			return msg
 		} else {
@@ -475,7 +485,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			// Ensure that if it's the first account being added for a particular discord user, it has to be a main
 			if !existingMember && !main {
 				// Send the failed addition message in the previously created private channel
-				logger.Error("First member for the discord user: " + discordname + ". This is required to be a main.")
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "First member for the discord user: "+discordname+". This is required to be a main.")
 				msg := "First member for the discord user: " + discordname + ". This is required to be a main."
 				return msg
 			}
@@ -483,7 +493,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			// Ensure there can only be 1 main at a time
 			if existingMember && main {
 				// Send the failed addition message in the previously created private channel
-				logger.Error("There can only be 1 main at a time per user: " + discordname)
+				util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "There can only be 1 main at a time per user: "+discordname)
 				msg := "There can only be 1 main at a time per user: " + discordname
 				return msg
 			}
@@ -515,6 +525,7 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 			return msg
 		}
 	case "Remove":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked player remove command with options: option=%s, name=%s, newName=%s, discordid=%d, discordname=%s, main=%t", option, name, newName, discordid, discordname, main))
 		// Remove the user from the temple page
 		s.temple.RemoveMemberFromTemple(ctx, name)
 
@@ -576,11 +587,12 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 
 		} else {
 			// Send the failed removal message in the previously created private channel
-			logger.Error("Member: " + name + " does not exist.")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Member: "+name+" does not exist.")
 			msg := "Member: " + name + " does not exist."
 			return msg
 		}
 	case "Name Change":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked player name change command with options: option=%s, name=%s, newName=%s, discordid=%d, discordname=%s, main=%t", option, name, newName, discordid, discordname, main))
 		if _, ok := s.members[name]; ok {
 			// Remove the user from the temple page and add new name
 			s.temple.RemoveMemberFromTemple(ctx, name)
@@ -628,26 +640,27 @@ func (s *Service) handlePlayerAdministration(ctx context.Context, session *disco
 
 		} else {
 			// Send the failed removal message in the previously created private channel
-			logger.Error("Member: " + name + " does not exist.")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Member: "+name+" does not exist.")
 			msg := "Member: " + name + " does not exist."
 			return msg
 		}
 	case "Update Main":
+		util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked player update main command with options: option=%s, name=%s, newName=%s, discordid=%d, discordname=%s, main=%t", option, name, newName, discordid, discordname, main))
 		// Ensure it is a main first
 		if _, ok := s.cp[name]; !ok {
-			logger.Error("Name: " + name + " is not a main")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Name: "+name+" is not a main")
 			msg := "Name: " + name + " is not a main. Ensure a main is used in the name section and the transferring name (not a main) is in the new-name section"
 			return msg
 		} else if _, ok := s.cp[newName]; ok {
 			// Ensure the new-name is not a main
-			logger.Error("New Name: " + newName + " is a main")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "New Name: "+newName+" is a main")
 			msg := "New Name: " + newName + " is a main. Ensure a main is used in the name section and the transferring name (not a main) is in the new-name section"
 			return msg
 		}
 
 		// Ensure the name and newName belong to the same discord user
 		if s.members[name].DiscordId != s.members[newName].DiscordId {
-			logger.Error("Main: " + name + " and New Main: " + newName + " do not belong to the same discord id.")
+			util.LogError(logger, s.config.DiscAuditChan, session, i.Member.User.Username, i.Member.User.AvatarURL(""), "Main: "+name+" and New Main: "+newName+" do not belong to the same discord id.")
 			msg := "Main: " + name + " and New Main: " + newName + " do not belong to the same discord id."
 			return msg
 		}
@@ -720,22 +733,25 @@ func (s *Service) updateCpPoints(ctx context.Context, session *discordgo.Session
 	players := util.WhiteStripCommas(player)
 	listOfPlayers := strings.Split(players, ",")
 
-	for _, player := range listOfPlayers {
+	for _, playerName := range listOfPlayers {
 		switch addOrRemove {
 		case "Add":
-			logger.Info("Adding " + strconv.Itoa(cp) + " clan point(s) to " + player)
-			s.cp[player] += cp
+			util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked points add command with options: player=%s, cp=%d, addOrRemove=%s", player, cp, addOrRemove))
+			logger.Info("Adding " + strconv.Itoa(cp) + " clan point(s) to " + playerName)
+			s.cp[playerName] += cp
 		case "Remove":
-			logger.Info("Removing " + strconv.Itoa(cp) + " clan point(s) to " + player)
-			if s.cp[player]-cp < 0 {
-				s.cp[player] = 0
+			util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked points remove command with options: player=%s, cp=%d, addOrRemove=%s", player, cp, addOrRemove))
+			logger.Info("Removing " + strconv.Itoa(cp) + " clan point(s) to " + playerName)
+			if s.cp[playerName]-cp < 0 {
+				s.cp[playerName] = 0
 			} else {
-				s.cp[player] -= cp
+				s.cp[playerName] -= cp
 			}
 		}
 	}
 
-	s.updateCpLeaderboard(ctx, session)
+	s.updateCpLeaderboard(ctx, session, i.Member.User)
 
+	logger.Info("Successfully managed cp for " + player)
 	return "Successfully managed cp for " + player
 }
