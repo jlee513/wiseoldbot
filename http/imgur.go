@@ -23,7 +23,7 @@ type ImgurClient struct {
 
 func NewImgurClient() *ImgurClient {
 	client := new(ImgurClient)
-	client.client = &http.Client{Timeout: 30 * time.Second}
+	client.client = &http.Client{Timeout: 90 * time.Second}
 	client.uploadURL = "https://api.imgur.com/3/image"
 	client.refreshURL = "https://api.imgur.com/oauth2/token"
 	return client
@@ -75,7 +75,7 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 			ClientSecret: ClientSecret,
 			GrantType:    "refresh_token",
 		})
-	logger.Info("Initiating retrieval of new imgur access token.")
+	logger.Debug("Initiating retrieval of new imgur access token.")
 
 	req, err := http.NewRequest(http.MethodPost, i.refreshURL, bytes.NewBuffer(rawBody))
 	if err != nil {
@@ -101,6 +101,8 @@ func (i ImgurClient) GetNewAccessToken(ctx context.Context, RefreshToken string,
 	if err = decoder.Decode(&response); err != nil {
 		return "", errors.New("failed to generate token - retry")
 	}
+
+	logger.Debug("Successfully retrieved new imgur access token.")
 
 	return response.AccessToken, nil
 }
