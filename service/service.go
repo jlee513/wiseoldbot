@@ -249,10 +249,10 @@ func (s *Service) initCron(ctx context.Context, session *discordgo.Session) {
 }
 
 func (s *Service) listenForAllChannelMessages(session *discordgo.Session, message *discordgo.MessageCreate) {
-	// Don't handle message if it's created by the discord bot
-	//if message.Author.ID != session.State.User.ID {
-	//	return
-	//}
+	// If the author of the message is not the webhook, ignore the message
+	if message.Author.ID != s.config.DiscLootLogWebhook {
+		return
+	}
 
 	// Run certain tasks depending on the channel the message was posted in
 	switch channel := message.ChannelID; channel {

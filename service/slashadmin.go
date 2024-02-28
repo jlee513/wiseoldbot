@@ -732,15 +732,13 @@ func (s *Service) updateCpPoints(ctx context.Context, session *discordgo.Session
 	// Check to see if there are multiple people
 	players := util.WhiteStripCommas(player)
 	listOfPlayers := strings.Split(players, ",")
-
+	util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked points add command with options: player=%s, cp=%d, addOrRemove=%s", player, cp, addOrRemove))
 	for _, playerName := range listOfPlayers {
 		switch addOrRemove {
 		case "Add":
-			util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked points add command with options: player=%s, cp=%d, addOrRemove=%s", player, cp, addOrRemove))
 			logger.Info("Adding " + strconv.Itoa(cp) + " clan point(s) to " + playerName)
 			s.cp[playerName] += cp
 		case "Remove":
-			util.LogAdminAction(logger, s.config.DiscAuditChan, i.Member.User.Username, i.Member.User.AvatarURL(""), session, fmt.Sprintf("Admin invoked points remove command with options: player=%s, cp=%d, addOrRemove=%s", player, cp, addOrRemove))
 			logger.Info("Removing " + strconv.Itoa(cp) + " clan point(s) to " + playerName)
 			if s.cp[playerName]-cp < 0 {
 				s.cp[playerName] = 0

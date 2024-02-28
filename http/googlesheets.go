@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"github.com/avast/retry-go"
 	"github.com/gemalto/flume"
 	"net/http"
 	"os"
@@ -51,9 +52,25 @@ func (g *GoogleSheetsClient) prepGoogleSheet(ctx context.Context, sheetId string
 
 	// Fetch the clan points google sheet
 	service := spreadsheet.NewServiceWithClient(client)
-	googlesheet, err := service.FetchSpreadsheet(sheetId)
+	var googlesheet spreadsheet.Spreadsheet
+	err = retry.Do(func() error {
+		googlesheet, err = service.FetchSpreadsheet(sheetId)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+	)
 	checkError(ctx, err)
-	sheet, err := googlesheet.SheetByIndex(0)
+	var sheet *spreadsheet.Sheet
+	err = retry.Do(func() error {
+		sheet, err = googlesheet.SheetByIndex(0)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+	)
 	checkError(ctx, err)
 
 	return sheet
@@ -246,7 +263,9 @@ func (g *GoogleSheetsClient) UpdateMembersSheet(ctx context.Context, members map
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err = sheet.Synchronize()
+	err = retry.Do(func() error {
+		return sheet.Synchronize()
+	})
 	checkError(ctx, err)
 }
 
@@ -294,7 +313,9 @@ func (g *GoogleSheetsClient) UpdateCpSheet(ctx context.Context, cp map[string]in
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err = sheet.Synchronize()
+	err = retry.Do(func() error {
+		return sheet.Synchronize()
+	})
 	checkError(ctx, err)
 }
 
@@ -320,7 +341,9 @@ func (g *GoogleSheetsClient) UpdateCpScreenshotsSheet(ctx context.Context, cpscr
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
+	err := retry.Do(func() error {
+		return sheet.Synchronize()
+	})
 	checkError(ctx, err)
 }
 
@@ -359,7 +382,9 @@ func (g *GoogleSheetsClient) UpdateSpeedSheet(ctx context.Context, speed map[str
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err = sheet.Synchronize()
+	err = retry.Do(func() error {
+		return sheet.Synchronize()
+	})
 	checkError(ctx, err)
 }
 
@@ -390,6 +415,8 @@ func (g *GoogleSheetsClient) UpdateSpeedScreenshotsSheet(ctx context.Context, sp
 	}
 
 	// Make sure call Synchronize to reflect the changes
-	err := sheet.Synchronize()
+	err := retry.Do(func() error {
+		return sheet.Synchronize()
+	})
 	checkError(ctx, err)
 }

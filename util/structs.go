@@ -9,6 +9,7 @@ type Config struct {
 	DiscGuildId           string `mapstructure:"DISCORD_GUILD_ID"`
 	DiscBotToken          string `mapstructure:"DISCORD_BOT_TOKEN"`
 	DiscBotId             string `mapstructure:"DISCORD_BOT_ID"`
+	DiscLootLogWebhook    string `mapstructure:"DISCORD_LOOT_LOG_WEBHOOK_ID"`
 	DiscSubChan           string `mapstructure:"DISCORD_SUBMISSION_CHANNEL"`
 	DiscCpLeaderboardChan string `mapstructure:"DISCORD_CP_LEADERBOARD_CHANNEL"`
 	DiscSpeedSubInfoChan  string `mapstructure:"DISCORD_SPEED_SUB_INFO_CHANNEL"`
