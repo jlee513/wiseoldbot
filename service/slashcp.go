@@ -186,7 +186,8 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been accepted\n\n" + msg.Content[index:]
+		index2 = strings.Index(msg.Content, "https://cdn.discordapp.com/ephemeral-attachments")
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been accepted\n\n" + msg.Content[index:index2] + "\n" + submissionUrl
 		_, err = session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
@@ -204,10 +205,46 @@ func (s *Service) handleCpApproval(ctx context.Context, session *discordgo.Sessi
 		index2 = strings.Index(msg.Content, "Players Involved:")
 		submitterId, _ := strconv.Atoi(msg.Content[index+9 : index2-1])
 
+		submissionUrl := ""
+
+		// If the url is an imgur link, skip uploading to imgur
+		if strings.Contains(msg.Content, "https://i.imgur.com") {
+			submissionUrl = msg.Content[index2:]
+		} else {
+			// Retrieve the bytes of the image
+			resp, err := s.client.Get(msg.Embeds[0].URL)
+			if err != nil {
+				util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to download discord image: "+err.Error())
+				return
+			}
+			defer resp.Body.Close()
+
+			// Retrieve the access token
+			accessToken, err := s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+			if err != nil {
+				// We will retry 10 times to get a new access token
+				counter := 0
+				for err != nil {
+					if counter == 10 {
+						util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to get access token for imgur: "+err.Error())
+						return
+					}
+					accessToken, err = s.imageservice.GetNewAccessToken(ctx, s.config.ImgurRefreshToken, s.config.ImgurClientId, s.config.ImgurClientSecret)
+					if err != nil {
+						counter++
+					} else {
+						break
+					}
+				}
+			}
+			submissionUrl = s.imageservice.Upload(ctx, accessToken, resp.Body)
+		}
+
 		// Send feedback to user
 		channel := s.checkOrCreateFeedbackChannel(ctx, session, submitter, submitterId, "", r.Member.User)
 		index = strings.Index(msg.Content, "Players Involved:")
-		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been rejected\n\n" + msg.Content[index:]
+		index2 = strings.Index(msg.Content, "https://cdn.discordapp.com/ephemeral-attachments")
+		feedBackMsg := "<@" + strconv.Itoa(submitterId) + ">\nYour clan point submission has been rejected\n\n" + msg.Content[index:index2] + "\n" + submissionUrl
 		_, err := session.ChannelMessageSend(channel, feedBackMsg)
 		if err != nil {
 			util.LogError(logger, s.config.DiscAuditChan, session, r.Member.User.Username, r.Member.User.AvatarURL(""), "Failed to send message to cp information channel: "+err.Error())
